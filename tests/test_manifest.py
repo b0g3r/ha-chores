@@ -9,7 +9,14 @@ def test_manifest_has_required_hacs_fields():
     manifest = json.loads(
         (REPO_ROOT / "custom_components" / "chores" / "manifest.json").read_text()
     )
-    required = {"domain", "documentation", "issue_tracker", "codeowners", "name", "version"}
+    required = {
+        "domain",
+        "documentation",
+        "issue_tracker",
+        "codeowners",
+        "name",
+        "version",
+    }
     missing = required - manifest.keys()
     assert not missing, f"manifest.json is missing required keys: {missing}"
 
