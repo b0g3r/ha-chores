@@ -90,3 +90,35 @@ async def test_mark_complete_rejects_unknown_chore_id(hass):
         await hass.services.async_call(
             DOMAIN, "mark_complete", {"chore_id": "does-not-exist"}, blocking=True
         )
+
+
+async def test_log_cycle_rejects_interval_mode_chore_with_service_validation_error(
+    hass,
+):
+    """chore.py's Chore.log_cycle raises a bare ValueError for non-cycle-count chores;
+    the service handler must translate that into ServiceValidationError like it already
+    does for an unknown chore_id, not let the raw ValueError escape."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Chores & Maintenance",
+        data={},
+        options={
+            "chores": {
+                "c2": {
+                    "name": "Water plants",
+                    "mode": "interval_days",
+                    "interval_days": 7,
+                    "completion_method": "notification_action",
+                    "notify_time": "08:00:00",
+                }
+            }
+        },
+    )
+    entry.add_to_hass(hass)
+    assert await hass.config_entries.async_setup(entry.entry_id)
+    await hass.async_block_till_done()
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN, "log_cycle", {"chore_id": "c2"}, blocking=True
+        )

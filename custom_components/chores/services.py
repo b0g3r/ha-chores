@@ -1,14 +1,13 @@
 """Services for the Chores & Maintenance integration."""
 from __future__ import annotations
 
-from datetime import date
-
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, chore_updated_signal
 from .due_check import async_run_due_check
@@ -40,7 +39,7 @@ async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
     entry, store = _get_entry_and_store(hass)
     if chore_id not in store.chores:
         raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
-    store.chores[chore_id].mark_complete(date.today())
+    store.chores[chore_id].mark_complete(dt_util.now().date())
     await async_notify_chore_updated(hass, chore_id)
     await async_clear_due_notification(hass, entry, chore_id)
 
@@ -55,7 +54,12 @@ async def async_register_services(hass: HomeAssistant) -> None:
         entry, store = _get_entry_and_store(hass)
         if chore_id not in store.chores:
             raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
-        store.chores[chore_id].log_cycle()
+        try:
+            store.chores[chore_id].log_cycle()
+        except ValueError as err:
+            raise ServiceValidationError(
+                f"Chore {chore_id} is not a cycle-count chore"
+            ) from err
         await async_notify_chore_updated(hass, chore_id)
         await async_run_due_check(hass, entry, chore_id)
 
