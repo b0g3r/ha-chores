@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
 from .const import CONF_CHORES, DOMAIN
+from .services import async_register_services
 from .store import ChoreStore
 
 PLATFORMS: list[str] = ["sensor", "binary_sensor", "button"]
@@ -18,6 +19,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     store = ChoreStore(hass, entry.entry_id)
     await store.async_load(entry.options.get(CONF_CHORES, {}))
     hass.data[DOMAIN][entry.entry_id] = store
+
+    await async_register_services(hass)
 
     device_registry = dr.async_get(hass)
     device_registry.async_get_or_create(
