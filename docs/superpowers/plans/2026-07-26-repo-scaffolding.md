@@ -409,50 +409,14 @@ git commit -m "Add ruff linting configuration"
 
 **Files:**
 - Create: `.github/workflows/validate.yml`
-- Test: `tests/test_ci_workflow.py`
 
 **Interfaces:**
 - Consumes: `requirements_test.txt` (Tasks 1/3), `custom_components/chores/manifest.json` (Task 1), `hacs.json` (Task 2).
 - Produces: nothing later tasks import — this is the last task in this plan; the feature-implementation plan runs against the CI this task establishes.
 
-- [ ] **Step 1: Write the failing test**
+There's no local test for this task — a workflow file's real validation is GitHub Actions running it, which happens on the first push. This task's "verify it passes" step is pushing and checking the run, not a local pytest step.
 
-Create `tests/test_ci_workflow.py`:
-
-```python
-"""Sanity-check the CI workflow file: valid YAML with the jobs we rely on."""
-from pathlib import Path
-
-import yaml
-
-REPO_ROOT = Path(__file__).parent.parent
-
-
-def test_workflow_defines_expected_jobs():
-    workflow_path = REPO_ROOT / ".github" / "workflows" / "validate.yml"
-    workflow = yaml.safe_load(workflow_path.read_text())
-    assert set(workflow["jobs"].keys()) == {"hassfest", "hacs", "pytest", "ruff"}
-```
-
-Add `pyyaml` to `requirements_test.txt` (it's only needed to run this one test, not by the integration itself):
-
-```
-pytest
-pytest-homeassistant-custom-component
-ruff
-pyyaml
-```
-
-- [ ] **Step 2: Run test to verify it fails**
-
-```bash
-./.venv/bin/pip install --quiet -r requirements_test.txt
-./.venv/bin/python -m pytest tests/test_ci_workflow.py -v
-```
-
-Expected: FAIL — `FileNotFoundError`, `.github/workflows/validate.yml` doesn't exist yet.
-
-- [ ] **Step 3: Write the workflow**
+- [ ] **Step 1: Write the workflow**
 
 Create `.github/workflows/validate.yml`:
 
@@ -481,7 +445,7 @@ jobs:
         with:
           category: integration
 
-  pytest:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -490,27 +454,10 @@ jobs:
           python-version: "3.13"
       - run: pip install -r requirements_test.txt
       - run: pytest
-
-  ruff:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-      - run: pip install -r requirements_test.txt
       - run: ruff check .
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
-
-```bash
-./.venv/bin/python -m pytest tests/test_ci_workflow.py -v
-```
-
-Expected: PASS.
-
-- [ ] **Step 5: Run the full test suite one more time to confirm nothing regressed**
+- [ ] **Step 2: Run the full local test suite and lint one more time to confirm nothing regressed**
 
 ```bash
 ./.venv/bin/python -m pytest tests/ -v
@@ -519,10 +466,10 @@ Expected: PASS.
 
 Expected: all tests PASS, ruff reports `All checks passed!`.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add .github/workflows/validate.yml tests/test_ci_workflow.py requirements_test.txt
+git add .github/workflows/validate.yml
 git commit -m "Add CI workflow: hassfest, HACS, pytest, and ruff validation"
 ```
 

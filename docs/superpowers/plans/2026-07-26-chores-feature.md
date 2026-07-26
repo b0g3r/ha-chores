@@ -1114,6 +1114,7 @@ from __future__ import annotations
 from datetime import date
 
 import voluptuous as vol
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
@@ -1127,23 +1128,23 @@ SERVICE_MARK_COMPLETE = "mark_complete"
 _CHORE_ID_SCHEMA = vol.Schema({vol.Required("chore_id"): cv.string})
 
 
-def _find_store_for_chore(hass: HomeAssistant, chore_id: str) -> ChoreStore:
-    for store in hass.data.get(DOMAIN, {}).values():
-        if isinstance(store, ChoreStore) and chore_id in store.chores:
-            return store
-    raise ValueError(f"No chore found with id {chore_id}")
+def _get_entry_and_store(hass: HomeAssistant) -> tuple[ConfigEntry, ChoreStore]:
+    """The hub is single-instance (config_flow.py enforces `single_instance_allowed`), so
+    there's always exactly one entry — no per-chore search across entries is needed."""
+    entry = hass.config_entries.async_entries(DOMAIN)[0]
+    return entry, hass.data[DOMAIN][entry.entry_id]
 
 
 async def async_notify_chore_updated(hass: HomeAssistant, chore_id: str) -> None:
     """Persist and push an update for one chore. Shared by services and event listeners."""
-    store = _find_store_for_chore(hass, chore_id)
+    _, store = _get_entry_and_store(hass)
     await store.async_save()
     async_dispatcher_send(hass, chore_updated_signal(chore_id))
 
 
 async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
     """The single completion routine — used by the service, NFC, and notification-action paths."""
-    store = _find_store_for_chore(hass, chore_id)
+    _, store = _get_entry_and_store(hass)
     store.chores[chore_id].mark_complete(date.today())
     await async_notify_chore_updated(hass, chore_id)
 
@@ -1155,7 +1156,7 @@ async def async_register_services(hass: HomeAssistant) -> None:
 
     async def _handle_log_cycle(call: ServiceCall) -> None:
         chore_id = call.data["chore_id"]
-        store = _find_store_for_chore(hass, chore_id)
+        _, store = _get_entry_and_store(hass)
         store.chores[chore_id].log_cycle()
         await async_notify_chore_updated(hass, chore_id)
 
@@ -1387,12 +1388,12 @@ async def async_clear_due_notification(hass: HomeAssistant, entry: ConfigEntry, 
         )
 ```
 
-Modify `custom_components/chores/services.py`: import and call the clearing routine from `async_complete_chore`. Replace:
+Modify `custom_components/chores/services.py`: import and call the clearing routine from `async_complete_chore`. `_get_entry_and_store` (Task 5) already returns the entry, so no new lookup helper is needed here. Replace:
 
 ```python
 async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
     """The single completion routine — used by the service, NFC, and notification-action paths."""
-    store = _find_store_for_chore(hass, chore_id)
+    _, store = _get_entry_and_store(hass)
     store.chores[chore_id].mark_complete(date.today())
     await async_notify_chore_updated(hass, chore_id)
 ```
@@ -1400,33 +1401,15 @@ async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
 with:
 
 ```python
-async def async_complete_chore(hass: HomeAssistant, entry, chore_id: str) -> None:
+async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
     """The single completion routine — used by the service, NFC, and notification-action paths."""
-    store = _find_store_for_chore(hass, chore_id)
+    entry, store = _get_entry_and_store(hass)
     store.chores[chore_id].mark_complete(date.today())
     await async_notify_chore_updated(hass, chore_id)
     await async_clear_due_notification(hass, entry, chore_id)
 ```
 
-and add `from .notify import async_clear_due_notification` to the top of `services.py`. Update the one caller inside `services.py` (`_handle_mark_complete`) to pass the entry:
-
-```python
-    async def _handle_mark_complete(call: ServiceCall) -> None:
-        chore_id = call.data["chore_id"]
-        entry = _find_entry_for_chore(hass, chore_id)
-        await async_complete_chore(hass, entry, chore_id)
-```
-
-This needs a way to go from `chore_id` back to its `ConfigEntry` (`_find_store_for_chore` only returns the store, not the entry it belongs to). Change `hass.data[DOMAIN][entry.entry_id] = store` bookkeeping so it's still keyed by `entry_id`, and add this helper near `_find_store_for_chore` in `services.py`:
-
-```python
-def _find_entry_for_chore(hass: HomeAssistant, chore_id: str):
-    for entry in hass.config_entries.async_entries(DOMAIN):
-        store = hass.data.get(DOMAIN, {}).get(entry.entry_id)
-        if isinstance(store, ChoreStore) and chore_id in store.chores:
-            return entry
-    raise ValueError(f"No config entry found owning chore {chore_id}")
-```
+and add `from .notify import async_clear_due_notification` to the top of `services.py`. No caller changes needed — `async_complete_chore`'s signature is unchanged, so `_handle_mark_complete` (Task 5) and Task 8's listeners keep calling it exactly as already written.
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -1602,7 +1585,7 @@ Modify `custom_components/chores/services.py`: `_handle_log_cycle` now also runs
 ```python
     async def _handle_log_cycle(call: ServiceCall) -> None:
         chore_id = call.data["chore_id"]
-        store = _find_store_for_chore(hass, chore_id)
+        _, store = _get_entry_and_store(hass)
         store.chores[chore_id].log_cycle()
         await async_notify_chore_updated(hass, chore_id)
 ```
@@ -1612,10 +1595,9 @@ with:
 ```python
     async def _handle_log_cycle(call: ServiceCall) -> None:
         chore_id = call.data["chore_id"]
-        store = _find_store_for_chore(hass, chore_id)
+        entry, store = _get_entry_and_store(hass)
         store.chores[chore_id].log_cycle()
         await async_notify_chore_updated(hass, chore_id)
-        entry = _find_entry_for_chore(hass, chore_id)
         await async_run_due_check(hass, entry, chore_id)
 ```
 
@@ -1766,7 +1748,7 @@ def async_register_listeners(hass: HomeAssistant, entry: ConfigEntry) -> list[Ca
                 continue
             entity_entry = registry.async_get(nfc_entity_id)
             if entity_entry is not None and entity_entry.unique_id == tag_id:
-                await async_complete_chore(hass, entry, chore_id)
+                await async_complete_chore(hass, chore_id)
 
     async def _on_notification_action(event: Event) -> None:
         action = event.data.get("action", "")
@@ -1774,7 +1756,7 @@ def async_register_listeners(hass: HomeAssistant, entry: ConfigEntry) -> list[Ca
             return
         chore_id = action[len(NOTIFICATION_ACTION_PREFIX):]
         if chore_id in entry.options.get(CONF_CHORES, {}):
-            await async_complete_chore(hass, entry, chore_id)
+            await async_complete_chore(hass, chore_id)
 
     return [
         hass.bus.async_listen("tag_scanned", _on_tag_scanned),
@@ -1920,7 +1902,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity, TodoListEntityFeature
+from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
@@ -1938,10 +1920,10 @@ async def async_setup_entry(
 
 
 class ActiveChoresTodoList(TodoListEntity):
-    """Lists every chore that is currently due/overdue."""
+    """Lists every chore that is currently due/overdue. Read-only: items are driven by
+    chore due-state (Task 1-7), not by user checkboxes, so no UPDATE_TODO_ITEM feature."""
 
     _attr_should_poll = False
-    _attr_supported_features = TodoListEntityFeature.UPDATE_TODO_ITEM
 
     def __init__(self, entry: ConfigEntry, store: ChoreStore) -> None:
         self._store = store
