@@ -156,12 +156,13 @@ class ChoresOptionsFlow(config_entries.OptionsFlow):
         current = self.config_entry.options.get(CONF_PERSON_NOTIFY_MAP, {})
         schema = vol.Schema(
             {
-                vol.Optional(
-                    person_id, default=current.get(person_id, "")
-                ): selector.EntitySelector(
+                vol.Optional(person_id): selector.EntitySelector(
                     selector.EntitySelectorConfig(domain="notify")
                 )
                 for person_id in person_entity_ids
             }
         )
-        return self.async_show_form(step_id="notify_mapping", data_schema=schema)
+        return self.async_show_form(
+            step_id="notify_mapping",
+            data_schema=self.add_suggested_values_to_schema(schema, current),
+        )

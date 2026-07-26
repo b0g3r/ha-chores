@@ -135,6 +135,38 @@ async def test_notify_mapping_sets_mapping_and_reads_person_entities(hass):
     }
 
 
+async def test_notify_mapping_saves_when_a_person_is_left_unmapped(hass):
+    """Regression test: an unmapped person field must not crash validation.
+
+    `vol.Optional(person_id, default="")` (the pre-fix shape) makes voluptuous
+    inject "" for any person omitted from user_input, and EntitySelector rejects
+    "" as neither a valid entity ID nor UUID. Leaving some people unmapped is the
+    normal case, so the form must save with only the mapped person present.
+    """
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="Chores & Maintenance", data={}, options={}
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+    hass.states.async_set("person.alice", "home")
+    hass.states.async_set("person.bob", "home")
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "notify_mapping"}
+    )
+
+    # person.bob is entirely omitted, simulating a user who leaves it blank.
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"person.alice": "notify.mobile_app_alice"}
+    )
+
+    assert result["type"] == "create_entry"
+    assert entry.options[CONF_PERSON_NOTIFY_MAP] == {
+        "person.alice": "notify.mobile_app_alice"
+    }
+
+
 def _options_flow(hass, entry):
     flow = ChoresOptionsFlow()
     flow.hass = hass

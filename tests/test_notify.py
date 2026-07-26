@@ -85,3 +85,55 @@ async def test_clear_due_notification_targets_everyone_mapped_regardless_of_pres
     data = calls[0]
     assert data["message"] == "clear_notification"
     assert data["data"]["tag"] == notification_tag("c1")
+
+
+def _entry_with_one_malformed_mapping(hass):
+    """One well-formed target alongside one malformed value (no 'domain.service' dot),
+    e.g. a leftover/hand-edited options entry. The malformed entry must not abort the
+    whole loop -- the well-formed target should still be notified/cleared."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Chores & Maintenance",
+        data={},
+        options={
+            CONF_PERSON_NOTIFY_MAP: {
+                "person.alex": "notify.alex_phone",
+                "person.bad": "not_a_valid_notify_id",
+            }
+        },
+    )
+    entry.add_to_hass(hass)
+    return entry
+
+
+async def test_send_due_notification_skips_malformed_entry_without_aborting_others(
+    hass,
+):
+    entry = _entry_with_one_malformed_mapping(hass)
+    hass.states.async_set("person.alex", "home")
+    hass.states.async_set("person.bad", "home")
+    calls = []
+    _register_fake_notify_service(hass, calls)
+
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30,
+        count=30,
+    )
+    await async_send_due_notification(hass, entry, chore)
+
+    assert len(calls) == 1
+    assert calls[0]["data"]["tag"] == notification_tag("c1")
+
+
+async def test_clear_due_notification_skips_malformed_entry_without_aborting_others(
+    hass,
+):
+    entry = _entry_with_one_malformed_mapping(hass)
+    calls = []
+    _register_fake_notify_service(hass, calls)
+
+    await async_clear_due_notification(hass, entry, "c1")
+
+    assert len(calls) == 1
+    assert calls[0]["message"] == "clear_notification"
+    assert calls[0]["data"]["tag"] == notification_tag("c1")

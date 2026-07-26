@@ -25,6 +25,8 @@ async def async_send_due_notification(
     person_notify_map: dict[str, str] = entry.options.get(CONF_PERSON_NOTIFY_MAP, {})
     tag = notification_tag(chore.chore_id)
     for person_entity_id, notify_entity_id in person_notify_map.items():
+        if "." not in notify_entity_id:
+            continue  # malformed mapping entry; don't let it abort the others
         state = hass.states.get(person_entity_id)
         if state is None or state.state != "home":
             continue
@@ -55,6 +57,8 @@ async def async_clear_due_notification(
     person_notify_map: dict[str, str] = entry.options.get(CONF_PERSON_NOTIFY_MAP, {})
     tag = notification_tag(chore_id)
     for notify_entity_id in person_notify_map.values():
+        if "." not in notify_entity_id:
+            continue  # malformed mapping entry; don't let it abort the others
         await hass.services.async_call(
             "notify",
             _notify_service_name(notify_entity_id),
