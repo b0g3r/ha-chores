@@ -5,7 +5,14 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
 from .chore import Chore
-from .const import CONF_PERSON_NOTIFY_MAP, NOTIFICATION_ACTION_PREFIX
+from .const import (
+    COMPLETION_BOTH,
+    COMPLETION_NOTIFICATION_ACTION,
+    CONF_CHORES,
+    CONF_COMPLETION_METHOD,
+    CONF_PERSON_NOTIFY_MAP,
+    NOTIFICATION_ACTION_PREFIX,
+)
 
 
 def notification_tag(chore_id: str) -> str:
@@ -23,7 +30,17 @@ async def async_send_due_notification(
 ) -> None:
     """Notify everyone currently home, mapped via the hub's person->notify options."""
     person_notify_map: dict[str, str] = entry.options.get(CONF_PERSON_NOTIFY_MAP, {})
+    chore_config = entry.options.get(CONF_CHORES, {}).get(chore.chore_id, {})
+    completion_method = chore_config.get(CONF_COMPLETION_METHOD)
     tag = notification_tag(chore.chore_id)
+    data: dict = {"tag": tag, "sticky": True}
+    if completion_method in (COMPLETION_NOTIFICATION_ACTION, COMPLETION_BOTH):
+        data["actions"] = [
+            {
+                "action": f"{NOTIFICATION_ACTION_PREFIX}{chore.chore_id}",
+                "title": "Mark done",
+            }
+        ]
     for person_entity_id, notify_entity_id in person_notify_map.items():
         if "." not in notify_entity_id:
             continue  # malformed mapping entry; don't let it abort the others
@@ -36,16 +53,7 @@ async def async_send_due_notification(
             {
                 "title": chore.name,
                 "message": f"{chore.name} is due.",
-                "data": {
-                    "tag": tag,
-                    "sticky": True,
-                    "actions": [
-                        {
-                            "action": f"{NOTIFICATION_ACTION_PREFIX}{chore.chore_id}",
-                            "title": "Mark done",
-                        }
-                    ],
-                },
+                "data": data,
             },
         )
 

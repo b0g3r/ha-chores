@@ -14,7 +14,9 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
-async def _setup_entry(hass, *, nfc_tag_entity_id: str):
+async def _setup_entry(
+    hass, *, nfc_tag_entity_id: str, completion_method: str = "both"
+):
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Chores & Maintenance",
@@ -25,7 +27,7 @@ async def _setup_entry(hass, *, nfc_tag_entity_id: str):
                     "name": "Dishwasher maintenance",
                     "mode": "cycle_count",
                     "cycle_threshold": 30,
-                    "completion_method": "both",
+                    "completion_method": completion_method,
                     "nfc_tag_entity_id": nfc_tag_entity_id,
                     "notify_time": "08:00:00",
                 }
@@ -65,3 +67,26 @@ async def test_notification_action_completes_matching_chore(hass):
 
     store = hass.data[DOMAIN][entry.entry_id]
     assert store.chores["c1"].count == 0
+
+
+async def test_tag_scanned_does_not_complete_notification_action_only_chore(hass):
+    """A chore configured for notification_action only must not be completable by a
+    tag scan, even if its (unused) nfc_tag_entity_id happens to match the scanned
+    tag."""
+    from homeassistant.helpers import entity_registry as er
+
+    registry = er.async_get(hass)
+    registry.async_get_or_create(
+        "tag", "tag", "test-tag-unique-id", suggested_object_id="dishwasher_maintenance"
+    )
+    entry = await _setup_entry(
+        hass,
+        nfc_tag_entity_id="tag.dishwasher_maintenance",
+        completion_method="notification_action",
+    )
+
+    hass.bus.async_fire("tag_scanned", {"tag_id": "test-tag-unique-id"})
+    await hass.async_block_till_done()
+
+    store = hass.data[DOMAIN][entry.entry_id]
+    assert store.chores["c1"].count == 30

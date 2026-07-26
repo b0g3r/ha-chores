@@ -3,7 +3,11 @@ import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.chore import Chore, ChoreMode
-from custom_components.chores.const import CONF_PERSON_NOTIFY_MAP, DOMAIN
+from custom_components.chores.const import (
+    CONF_CHORES,
+    CONF_PERSON_NOTIFY_MAP,
+    DOMAIN,
+)
 from custom_components.chores.notify import (
     async_clear_due_notification,
     async_send_due_notification,
@@ -16,12 +20,15 @@ def auto_enable_custom_integrations(enable_custom_integrations):
     yield
 
 
-def _entry_with_mapping(hass):
+def _entry_with_mapping(hass, *, chores: dict | None = None):
     entry = MockConfigEntry(
         domain=DOMAIN,
         title="Chores & Maintenance",
         data={},
-        options={CONF_PERSON_NOTIFY_MAP: {"person.alex": "notify.alex_phone"}},
+        options={
+            CONF_PERSON_NOTIFY_MAP: {"person.alex": "notify.alex_phone"},
+            **({CONF_CHORES: chores} if chores is not None else {}),
+        },
     )
     entry.add_to_hass(hass)
     return entry
@@ -54,6 +61,38 @@ async def test_send_due_notification_targets_only_people_home(hass):
     data = calls[0]
     assert data["data"]["tag"] == notification_tag("c1")
     assert "Dishwasher maintenance" in data["message"]
+
+
+async def test_send_due_notification_omits_mark_done_action_for_nfc_tag_only_chore(
+    hass,
+):
+    """completion_method="nfc_tag" means the chore is only completable by scanning the
+    tag; the notification must not offer a "Mark done" action button for it."""
+    entry = _entry_with_mapping(
+        hass,
+        chores={
+            "c1": {
+                "name": "Dishwasher maintenance",
+                "mode": "cycle_count",
+                "cycle_threshold": 30,
+                "completion_method": "nfc_tag",
+                "nfc_tag_entity_id": "tag.dishwasher_maintenance",
+                "notify_time": "08:00:00",
+            }
+        },
+    )
+    hass.states.async_set("person.alex", "home")
+    calls = []
+    _register_fake_notify_service(hass, calls)
+
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30,
+        count=30,
+    )
+    await async_send_due_notification(hass, entry, chore)
+
+    assert len(calls) == 1
+    assert "actions" not in calls[0]["data"]
 
 
 async def test_send_due_notification_skips_people_not_home(hass):
