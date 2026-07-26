@@ -1,0 +1,52 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Set up Chores & Maintenance"
+      }
+    },
+    "abort": {
+      "single_instance_allowed": "Only one Chores & Maintenance hub is allowed."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "menu_options": {
+          "add_chore": "Add a chore",
+          "remove_chore": "Remove a chore",
+          "notify_mapping": "Set up who gets notified"
+        }
+      },
+      "add_chore": {
+        "title": "Add a chore",
+        "data": {
+          "name": "Name",
+          "mode": "Due-trigger type",
+          "interval_days": "Interval (days) — only used if type is Interval",
+          "cycle_threshold": "Cycle threshold — only used if type is Cycle count",
+          "completion_method": "Completion method",
+          "nfc_tag_entity_id": "NFC tag — only used if completion method includes NFC tag",
+          "notify_time": "Morning check time"
+        }
+      },
+      "remove_chore": {
+        "title": "Remove a chore",
+        "data": {
+          "chore_id": "Chore"
+        }
+      },
+      "notify_mapping": {
+        "title": "Set up who gets notified"
+      }
+    },
+    "abort": {
+      "no_chores": "There are no chores to remove yet."
+    },
+    "error": {
+      "interval_days_required": "Enter an interval (in days) for this chore.",
+      "cycle_threshold_required": "Enter a cycle threshold for this chore.",
+      "nfc_tag_required": "Select an NFC tag, since the completion method includes NFC tag."
+    }
+  }
+}

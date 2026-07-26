@@ -1,0 +1,15 @@
+log_cycle:
+  fields:
+    chore_id:
+      required: true
+      example: "3f6a1c2b9e4d4f0a8b6c1d2e3f4a5b6c"
+      selector:
+        text:
+
+mark_complete:
+  fields:
+    chore_id:
+      required: true
+      example: "3f6a1c2b9e4d4f0a8b6c1d2e3f4a5b6c"
+      selector:
+        text:
