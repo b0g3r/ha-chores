@@ -22,6 +22,9 @@ COMPLETION_BOTH = "both"
 
 NOTIFICATION_ACTION_PREFIX = "CHORES_DONE_"
 
+SERVICE_LOG_CYCLE = "log_cycle"
+SERVICE_MARK_COMPLETE = "mark_complete"
+
 
 def chore_updated_signal(chore_id: str) -> str:
     """Dispatcher signal name fired whenever a chore's runtime state changes."""

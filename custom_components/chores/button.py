@@ -4,13 +4,11 @@ from __future__ import annotations
 from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-from .const import DOMAIN
+from .const import DOMAIN, SERVICE_MARK_COMPLETE
+from .entity import chore_device_info
 from .store import ChoreStore
-
-SERVICE_MARK_COMPLETE = "mark_complete"
 
 
 async def async_setup_entry(
@@ -30,11 +28,7 @@ class ChoreMarkCompleteButton(ButtonEntity):
         chore = store.chores[chore_id]
         self._attr_unique_id = f"{chore_id}_mark_complete"
         self._attr_name = f"{chore.name} mark complete"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, chore_id)},
-            name=chore.name,
-            via_device=(DOMAIN, entry.entry_id),
-        )
+        self._attr_device_info = chore_device_info(entry, chore_id, chore.name)
 
     async def async_press(self) -> None:
         await self.hass.services.async_call(

@@ -11,6 +11,9 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    COMPLETION_BOTH,
+    COMPLETION_NFC_TAG,
+    COMPLETION_NOTIFICATION_ACTION,
     CONF_CHORES,
     CONF_COMPLETION_METHOD,
     CONF_CYCLE_THRESHOLD,
@@ -71,10 +74,14 @@ def _chore_schema() -> vol.Schema:
                 )
             ),
             vol.Required(
-                CONF_COMPLETION_METHOD, default="nfc_tag"
+                CONF_COMPLETION_METHOD, default=COMPLETION_NFC_TAG
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=["nfc_tag", "notification_action", "both"],
+                    options=[
+                        COMPLETION_NFC_TAG,
+                        COMPLETION_NOTIFICATION_ACTION,
+                        COMPLETION_BOTH,
+                    ],
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
@@ -107,8 +114,8 @@ class ChoresOptionsFlow(config_entries.OptionsFlow):
             ):
                 errors["base"] = "cycle_threshold_required"
             elif user_input[CONF_COMPLETION_METHOD] in (
-                "nfc_tag",
-                "both",
+                COMPLETION_NFC_TAG,
+                COMPLETION_BOTH,
             ) and not user_input.get(CONF_NFC_TAG_ENTITY_ID):
                 errors["base"] = "nfc_tag_required"
             else:

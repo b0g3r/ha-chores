@@ -1,5 +1,4 @@
 """Tests for NFC tag and notification-action completion wiring."""
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.const import (
@@ -7,11 +6,6 @@ from custom_components.chores.const import (
     DOMAIN,
     NOTIFICATION_ACTION_PREFIX,
 )
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
 
 
 async def _setup_entry(

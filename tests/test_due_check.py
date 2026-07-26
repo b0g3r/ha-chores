@@ -2,7 +2,6 @@
 from datetime import date
 from unittest.mock import AsyncMock, patch
 
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.const import CONF_PERSON_NOTIFY_MAP, DOMAIN
@@ -11,11 +10,6 @@ from custom_components.chores.due_check import (
     async_schedule_daily_checks,
 )
 from custom_components.chores.store import ChoreStore
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
 
 
 async def _setup_entry_with_one_chore(hass, chores):

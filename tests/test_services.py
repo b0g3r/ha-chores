@@ -5,37 +5,11 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.const import DOMAIN
 
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
-
-
-async def _setup_entry_with_one_chore(hass):
-    entry = MockConfigEntry(
-        domain=DOMAIN,
-        title="Chores & Maintenance",
-        data={},
-        options={
-            "chores": {
-                "c1": {
-                    "name": "Dishwasher maintenance",
-                    "mode": "cycle_count",
-                    "cycle_threshold": 30,
-                    "completion_method": "notification_action",
-                    "notify_time": "08:00:00",
-                }
-            }
-        },
-    )
-    entry.add_to_hass(hass)
-    assert await hass.config_entries.async_setup(entry.entry_id)
-    await hass.async_block_till_done()
-    return entry
+from .conftest import setup_entry_with_one_chore
 
 
 async def test_log_cycle_increments_count_and_updates_sensor(hass):
-    await _setup_entry_with_one_chore(hass)
+    await setup_entry_with_one_chore(hass)
 
     for _ in range(30):
         await hass.services.async_call(
@@ -47,7 +21,7 @@ async def test_log_cycle_increments_count_and_updates_sensor(hass):
 
 
 async def test_mark_complete_resets_and_updates_sensor(hass):
-    await _setup_entry_with_one_chore(hass)
+    await setup_entry_with_one_chore(hass)
     for _ in range(30):
         await hass.services.async_call(
             DOMAIN, "log_cycle", {"chore_id": "c1"}, blocking=True
@@ -64,7 +38,7 @@ async def test_mark_complete_resets_and_updates_sensor(hass):
 async def test_button_press_completes_chore_end_to_end(hass):
     """Task 4's button entity calls chores.mark_complete by string name; verify the
     literal actually matches services.py's registration, not just that it compiles."""
-    await _setup_entry_with_one_chore(hass)
+    await setup_entry_with_one_chore(hass)
     for _ in range(30):
         await hass.services.async_call(
             DOMAIN, "log_cycle", {"chore_id": "c1"}, blocking=True
@@ -84,7 +58,7 @@ async def test_button_press_completes_chore_end_to_end(hass):
 
 
 async def test_mark_complete_rejects_unknown_chore_id(hass):
-    await _setup_entry_with_one_chore(hass)
+    await setup_entry_with_one_chore(hass)
 
     with pytest.raises(ServiceValidationError):
         await hass.services.async_call(

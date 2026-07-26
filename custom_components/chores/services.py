@@ -9,13 +9,15 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, chore_updated_signal
+from .const import (
+    DOMAIN,
+    SERVICE_LOG_CYCLE,
+    SERVICE_MARK_COMPLETE,
+    chore_updated_signal,
+)
 from .due_check import async_run_due_check
 from .notify import async_clear_due_notification
 from .store import ChoreStore
-
-SERVICE_LOG_CYCLE = "log_cycle"
-SERVICE_MARK_COMPLETE = "mark_complete"
 
 _CHORE_ID_SCHEMA = vol.Schema({vol.Required("chore_id"): cv.string})
 

@@ -1,16 +1,9 @@
 """Tests for Chores integration setup."""
-import pytest
 from homeassistant.config_entries import ConfigEntryState
 from homeassistant.helpers import device_registry as dr
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.const import DOMAIN
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    """Enable custom integration loading for every test in this module."""
-    yield
 
 
 async def test_setup_entry_succeeds(hass):

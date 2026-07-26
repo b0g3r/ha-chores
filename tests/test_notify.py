@@ -1,5 +1,4 @@
 """Tests for due-notification sending and clearing."""
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.chore import Chore, ChoreMode
@@ -13,11 +12,6 @@ from custom_components.chores.notify import (
     async_send_due_notification,
     notification_tag,
 )
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
 
 
 def _entry_with_mapping(hass, *, chores: dict | None = None):

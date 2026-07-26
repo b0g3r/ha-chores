@@ -1,6 +1,5 @@
 """Tests for the hub config flow and options flow."""
 
-import pytest
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.config_flow import ChoresOptionsFlow
@@ -9,11 +8,6 @@ from custom_components.chores.const import (
     CONF_PERSON_NOTIFY_MAP,
     DOMAIN,
 )
-
-
-@pytest.fixture(autouse=True)
-def auto_enable_custom_integrations(enable_custom_integrations):
-    yield
 
 
 async def test_user_flow_creates_single_hub_entry(hass):
