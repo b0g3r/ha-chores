@@ -18,6 +18,7 @@ from .const import (
     CONF_COMPLETION_METHOD,
     CONF_CYCLE_THRESHOLD,
     CONF_INTERVAL_DAYS,
+    CONF_MESSAGE,
     CONF_MODE,
     CONF_NAME,
     CONF_NFC_TAG_ENTITY_ID,
@@ -89,6 +90,7 @@ def _chore_schema() -> vol.Schema:
                 selector.EntitySelectorConfig(domain="tag")
             ),
             vol.Required(CONF_NOTIFY_TIME): selector.TimeSelector(),
+            vol.Optional(CONF_MESSAGE): str,
         }
     )
 

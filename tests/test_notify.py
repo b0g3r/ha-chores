@@ -89,6 +89,33 @@ async def test_send_due_notification_omits_mark_done_action_for_nfc_tag_only_cho
     assert "actions" not in calls[0]["data"]
 
 
+async def test_send_due_notification_uses_custom_message_when_set(hass):
+    entry = _entry_with_mapping(
+        hass,
+        chores={
+            "c1": {
+                "name": "Dishwasher maintenance",
+                "mode": "cycle_count",
+                "cycle_threshold": 30,
+                "completion_method": "notification_action",
+                "notify_time": "08:00:00",
+                "message": "Run the rinse-aid cycle!",
+            }
+        },
+    )
+    hass.states.async_set("person.alex", "home")
+    calls = []
+    _register_fake_notify_service(hass, calls)
+
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30,
+        count=30,
+    )
+    await async_send_due_notification(hass, entry, chore)
+
+    assert calls[0]["message"] == "Run the rinse-aid cycle!"
+
+
 async def test_send_due_notification_skips_people_not_home(hass):
     entry = _entry_with_mapping(hass)
     hass.states.async_set("person.alex", "not_home")

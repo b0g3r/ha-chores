@@ -10,6 +10,7 @@ from .const import (
     COMPLETION_NOTIFICATION_ACTION,
     CONF_CHORES,
     CONF_COMPLETION_METHOD,
+    CONF_MESSAGE,
     CONF_PERSON_NOTIFY_MAP,
     NOTIFICATION_ACTION_PREFIX,
 )
@@ -32,6 +33,7 @@ async def async_send_due_notification(
     person_notify_map: dict[str, str] = entry.options.get(CONF_PERSON_NOTIFY_MAP, {})
     chore_config = entry.options.get(CONF_CHORES, {}).get(chore.chore_id, {})
     completion_method = chore_config.get(CONF_COMPLETION_METHOD)
+    message = chore_config.get(CONF_MESSAGE) or f"{chore.name} is due."
     tag = notification_tag(chore.chore_id)
     data: dict = {"tag": tag, "sticky": True}
     if completion_method in (COMPLETION_NOTIFICATION_ACTION, COMPLETION_BOTH):
@@ -52,7 +54,7 @@ async def async_send_due_notification(
             _notify_service_name(notify_entity_id),
             {
                 "title": chore.name,
-                "message": f"{chore.name} is due.",
+                "message": message,
                 "data": data,
             },
         )

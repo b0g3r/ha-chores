@@ -2,7 +2,8 @@
   "config": {
     "step": {
       "user": {
-        "title": "Set up Chores & Maintenance"
+        "title": "Set up Chores & Maintenance",
+        "description": "This creates the hub. Add chores and set up notifications afterward from the hub's Configure button."
       }
     },
     "abort": {
@@ -27,7 +28,8 @@
           "cycle_threshold": "Cycle threshold — only used if type is Cycle count",
           "completion_method": "Completion method",
           "nfc_tag_entity_id": "NFC tag — only used if completion method includes NFC tag",
-          "notify_time": "Morning check time"
+          "notify_time": "Morning check time",
+          "message": "Notification message — leave blank for the default \"<name> is due.\""
         }
       },
       "remove_chore": {
