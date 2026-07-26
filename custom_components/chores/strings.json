@@ -26,10 +26,12 @@
           "mode": "Due-trigger type",
           "interval_days": "Interval (days) — only used if type is Interval",
           "cycle_threshold": "Cycle threshold — only used if type is Cycle count",
-          "completion_method": "Completion method",
-          "nfc_tag_entity_id": "NFC tag — only used if completion method includes NFC tag",
-          "notify_time": "Morning check time",
-          "message": "Notification message — leave blank for the default \"<name> is due.\""
+          "nfc_enabled": "Complete by scanning an NFC tag",
+          "nfc_tag_entity_id": "NFC tag — required if NFC tag scanning is enabled",
+          "notification_enabled": "Complete via a notification action button",
+          "notify_enabled": "Send a repeating reminder notification",
+          "notify_time": "Reminder notification time — required if reminders are enabled",
+          "message": "Notification message — leave blank for the default: the chore's name plus \"is due.\""
         }
       },
       "remove_chore": {
@@ -48,7 +50,9 @@
     "error": {
       "interval_days_required": "Enter an interval (in days) for this chore.",
       "cycle_threshold_required": "Enter a cycle threshold for this chore.",
-      "nfc_tag_required": "Select an NFC tag, since the completion method includes NFC tag."
+      "completion_method_required": "Enable at least one completion method: NFC tag or notification action.",
+      "nfc_tag_required": "Select an NFC tag, since NFC tag scanning is enabled.",
+      "notify_time_required": "Set a reminder notification time, since reminders are enabled."
     }
   }
 }

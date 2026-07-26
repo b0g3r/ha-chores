@@ -82,7 +82,9 @@ async def test_log_cycle_rejects_interval_mode_chore_with_service_validation_err
                     "name": "Water plants",
                     "mode": "interval_days",
                     "interval_days": 7,
-                    "completion_method": "notification_action",
+                    "nfc_enabled": False,
+                    "notification_enabled": True,
+                    "notify_enabled": True,
                     "notify_time": "08:00:00",
                 }
             }

@@ -9,7 +9,8 @@ from custom_components.chores.const import (
 
 
 async def _setup_entry(
-    hass, *, nfc_tag_entity_id: str, completion_method: str = "both"
+    hass, *, nfc_tag_entity_id: str, nfc_enabled: bool = True,
+    notification_enabled: bool = True,
 ):
     entry = MockConfigEntry(
         domain=DOMAIN,
@@ -21,8 +22,10 @@ async def _setup_entry(
                     "name": "Dishwasher maintenance",
                     "mode": "cycle_count",
                     "cycle_threshold": 30,
-                    "completion_method": completion_method,
+                    "nfc_enabled": nfc_enabled,
+                    "notification_enabled": notification_enabled,
                     "nfc_tag_entity_id": nfc_tag_entity_id,
+                    "notify_enabled": True,
                     "notify_time": "08:00:00",
                 }
             }
@@ -76,7 +79,7 @@ async def test_tag_scanned_does_not_complete_notification_action_only_chore(hass
     entry = await _setup_entry(
         hass,
         nfc_tag_entity_id="tag.dishwasher_maintenance",
-        completion_method="notification_action",
+        nfc_enabled=False,
     )
 
     hass.bus.async_fire("tag_scanned", {"tag_id": "test-tag-unique-id"})

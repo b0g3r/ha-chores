@@ -8,10 +8,8 @@ from homeassistant.core import Event, HomeAssistant
 from homeassistant.helpers import entity_registry as er
 
 from .const import (
-    COMPLETION_BOTH,
-    COMPLETION_NFC_TAG,
     CONF_CHORES,
-    CONF_COMPLETION_METHOD,
+    CONF_NFC_ENABLED,
     CONF_NFC_TAG_ENTITY_ID,
     NOTIFICATION_ACTION_PREFIX,
 )
@@ -27,10 +25,7 @@ def async_register_listeners(
         tag_id = event.data.get("tag_id")
         registry = er.async_get(hass)
         for chore_id, config in entry.options.get(CONF_CHORES, {}).items():
-            if config.get(CONF_COMPLETION_METHOD) not in (
-                COMPLETION_NFC_TAG,
-                COMPLETION_BOTH,
-            ):
+            if not config.get(CONF_NFC_ENABLED):
                 continue
             nfc_entity_id = config.get(CONF_NFC_TAG_ENTITY_ID)
             if not nfc_entity_id:

@@ -11,17 +11,16 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
-    COMPLETION_BOTH,
-    COMPLETION_NFC_TAG,
-    COMPLETION_NOTIFICATION_ACTION,
     CONF_CHORES,
-    CONF_COMPLETION_METHOD,
     CONF_CYCLE_THRESHOLD,
     CONF_INTERVAL_DAYS,
     CONF_MESSAGE,
     CONF_MODE,
     CONF_NAME,
+    CONF_NFC_ENABLED,
     CONF_NFC_TAG_ENTITY_ID,
+    CONF_NOTIFICATION_ENABLED,
+    CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_TIME,
     CONF_PERSON_NOTIFY_MAP,
     DOMAIN,
@@ -74,22 +73,17 @@ def _chore_schema() -> vol.Schema:
                     min=1, max=10000, mode=selector.NumberSelectorMode.BOX
                 )
             ),
-            vol.Required(
-                CONF_COMPLETION_METHOD, default=COMPLETION_NFC_TAG
-            ): selector.SelectSelector(
-                selector.SelectSelectorConfig(
-                    options=[
-                        COMPLETION_NFC_TAG,
-                        COMPLETION_NOTIFICATION_ACTION,
-                        COMPLETION_BOTH,
-                    ],
-                    mode=selector.SelectSelectorMode.DROPDOWN,
-                )
-            ),
+            vol.Required(CONF_NFC_ENABLED, default=False): selector.BooleanSelector(),
             vol.Optional(CONF_NFC_TAG_ENTITY_ID): selector.EntitySelector(
                 selector.EntitySelectorConfig(domain="tag")
             ),
-            vol.Required(CONF_NOTIFY_TIME): selector.TimeSelector(),
+            vol.Required(
+                CONF_NOTIFICATION_ENABLED, default=False
+            ): selector.BooleanSelector(),
+            vol.Required(
+                CONF_NOTIFY_ENABLED, default=False
+            ): selector.BooleanSelector(),
+            vol.Optional(CONF_NOTIFY_TIME): selector.TimeSelector(),
             vol.Optional(CONF_MESSAGE): str,
         }
     )
@@ -115,11 +109,18 @@ class ChoresOptionsFlow(config_entries.OptionsFlow):
                 CONF_CYCLE_THRESHOLD
             ):
                 errors["base"] = "cycle_threshold_required"
-            elif user_input[CONF_COMPLETION_METHOD] in (
-                COMPLETION_NFC_TAG,
-                COMPLETION_BOTH,
-            ) and not user_input.get(CONF_NFC_TAG_ENTITY_ID):
+            elif not user_input.get(CONF_NFC_ENABLED) and not user_input.get(
+                CONF_NOTIFICATION_ENABLED
+            ):
+                errors["base"] = "completion_method_required"
+            elif user_input.get(CONF_NFC_ENABLED) and not user_input.get(
+                CONF_NFC_TAG_ENTITY_ID
+            ):
                 errors["base"] = "nfc_tag_required"
+            elif user_input.get(CONF_NOTIFY_ENABLED) and not user_input.get(
+                CONF_NOTIFY_TIME
+            ):
+                errors["base"] = "notify_time_required"
             else:
                 chores = dict(self.config_entry.options.get(CONF_CHORES, {}))
                 chores[uuid.uuid4().hex] = user_input

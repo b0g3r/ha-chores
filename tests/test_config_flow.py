@@ -48,7 +48,9 @@ async def test_add_chore_via_options_flow(hass):
             "mode": "cycle_count",
             "interval_days": 7,
             "cycle_threshold": 30,
-            "completion_method": "notification_action",
+            "nfc_enabled": False,
+            "notification_enabled": True,
+            "notify_enabled": True,
             "notify_time": "08:00:00",
         },
     )
@@ -181,7 +183,9 @@ async def test_add_chore_requires_interval_days_for_interval_mode(hass):
             "mode": "interval_days",
             "interval_days": 0,
             "cycle_threshold": 30,
-            "completion_method": "notification_action",
+            "nfc_enabled": False,
+            "notification_enabled": True,
+            "notify_enabled": True,
             "notify_time": "08:00:00",
         }
     )
@@ -203,7 +207,9 @@ async def test_add_chore_requires_cycle_threshold_for_cycle_count_mode(hass):
             "mode": "cycle_count",
             "interval_days": 7,
             "cycle_threshold": 0,
-            "completion_method": "notification_action",
+            "nfc_enabled": False,
+            "notification_enabled": True,
+            "notify_enabled": True,
             "notify_time": "08:00:00",
         }
     )
@@ -212,7 +218,7 @@ async def test_add_chore_requires_cycle_threshold_for_cycle_count_mode(hass):
     assert result["errors"]["base"] == "cycle_threshold_required"
 
 
-async def test_add_chore_requires_nfc_tag_when_completion_method_needs_it(hass):
+async def test_add_chore_requires_at_least_one_completion_method(hass):
     entry = MockConfigEntry(
         domain=DOMAIN, title="Chores & Maintenance", data={}, options={}
     )
@@ -225,10 +231,59 @@ async def test_add_chore_requires_nfc_tag_when_completion_method_needs_it(hass):
             "mode": "interval_days",
             "interval_days": 7,
             "cycle_threshold": 30,
-            "completion_method": "nfc_tag",
+            "nfc_enabled": False,
+            "notification_enabled": False,
+            "notify_enabled": True,
+            "notify_time": "08:00:00",
+        }
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"]["base"] == "completion_method_required"
+
+
+async def test_add_chore_requires_nfc_tag_when_nfc_enabled(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="Chores & Maintenance", data={}, options={}
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    result = await _options_flow(hass, entry).async_step_add_chore(
+        {
+            "name": "Vacuum",
+            "mode": "interval_days",
+            "interval_days": 7,
+            "cycle_threshold": 30,
+            "nfc_enabled": True,
+            "notification_enabled": False,
+            "notify_enabled": True,
             "notify_time": "08:00:00",
         }
     )
 
     assert result["type"] == "form"
     assert result["errors"]["base"] == "nfc_tag_required"
+
+
+async def test_add_chore_requires_notify_time_when_notify_enabled(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="Chores & Maintenance", data={}, options={}
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    result = await _options_flow(hass, entry).async_step_add_chore(
+        {
+            "name": "Vacuum",
+            "mode": "interval_days",
+            "interval_days": 7,
+            "cycle_threshold": 30,
+            "nfc_enabled": False,
+            "notification_enabled": True,
+            "notify_enabled": True,
+        }
+    )
+
+    assert result["type"] == "form"
+    assert result["errors"]["base"] == "notify_time_required"

@@ -33,7 +33,9 @@ async def _setup_entry_with_due_chore(hass):
                 "name": "Dishwasher maintenance",
                 "mode": "cycle_count",
                 "cycle_threshold": 30,
-                "completion_method": "notification_action",
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": True,
                 "notify_time": "08:00:00",
             }
         },
@@ -69,7 +71,9 @@ async def test_log_cycle_service_triggers_immediate_due_check(hass):
                 "name": "Dishwasher maintenance",
                 "mode": "cycle_count",
                 "cycle_threshold": 30,
-                "completion_method": "notification_action",
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": True,
                 "notify_time": "08:00:00",
             }
         },
@@ -98,14 +102,18 @@ async def test_schedule_daily_checks_registers_one_tracker_per_chore_at_its_time
                 "name": "Dishwasher maintenance",
                 "mode": "cycle_count",
                 "cycle_threshold": 30,
-                "completion_method": "notification_action",
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": True,
                 "notify_time": "08:00:00",
             },
             "c2": {
                 "name": "Water the plants",
                 "mode": "interval_days",
                 "interval_days": 3,
-                "completion_method": "notification_action",
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": True,
                 "notify_time": "19:30:15",
             },
         },
@@ -122,3 +130,27 @@ async def test_schedule_daily_checks_registers_one_tracker_per_chore_at_its_time
     registered_times = [call.kwargs for call in track_mock.call_args_list]
     assert {"hour": 8, "minute": 0, "second": 0} in registered_times
     assert {"hour": 19, "minute": 30, "second": 15} in registered_times
+
+
+async def test_schedule_daily_checks_skips_chores_with_reminders_disabled(hass):
+    entry = await _setup_entry_with_one_chore(
+        hass,
+        {
+            "c1": {
+                "name": "Dishwasher maintenance",
+                "mode": "cycle_count",
+                "cycle_threshold": 30,
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": False,
+            },
+        },
+    )
+
+    with patch(
+        "custom_components.chores.due_check.async_track_time_change"
+    ) as track_mock:
+        unsubs = async_schedule_daily_checks(hass, entry)
+
+    assert unsubs == []
+    assert track_mock.call_count == 0

@@ -6,11 +6,9 @@ from homeassistant.core import HomeAssistant
 
 from .chore import Chore
 from .const import (
-    COMPLETION_BOTH,
-    COMPLETION_NOTIFICATION_ACTION,
     CONF_CHORES,
-    CONF_COMPLETION_METHOD,
     CONF_MESSAGE,
+    CONF_NOTIFICATION_ENABLED,
     CONF_PERSON_NOTIFY_MAP,
     NOTIFICATION_ACTION_PREFIX,
 )
@@ -32,11 +30,10 @@ async def async_send_due_notification(
     """Notify everyone currently home, mapped via the hub's person->notify options."""
     person_notify_map: dict[str, str] = entry.options.get(CONF_PERSON_NOTIFY_MAP, {})
     chore_config = entry.options.get(CONF_CHORES, {}).get(chore.chore_id, {})
-    completion_method = chore_config.get(CONF_COMPLETION_METHOD)
     message = chore_config.get(CONF_MESSAGE) or f"{chore.name} is due."
     tag = notification_tag(chore.chore_id)
     data: dict = {"tag": tag, "sticky": True}
-    if completion_method in (COMPLETION_NOTIFICATION_ACTION, COMPLETION_BOTH):
+    if chore_config.get(CONF_NOTIFICATION_ENABLED):
         data["actions"] = [
             {
                 "action": f"{NOTIFICATION_ACTION_PREFIX}{chore.chore_id}",

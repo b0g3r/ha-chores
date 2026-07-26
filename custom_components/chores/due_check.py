@@ -10,7 +10,13 @@ from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_change
 from homeassistant.util import dt as dt_util
 
-from .const import CONF_CHORES, DOMAIN, chore_updated_signal
+from .const import (
+    CONF_CHORES,
+    CONF_NOTIFY_ENABLED,
+    CONF_NOTIFY_TIME,
+    DOMAIN,
+    chore_updated_signal,
+)
 from .notify import async_send_due_notification
 from .store import ChoreStore
 
@@ -33,11 +39,15 @@ async def async_run_due_check(
 def async_schedule_daily_checks(
     hass: HomeAssistant, entry: ConfigEntry
 ) -> list[Callable[[], None]]:
-    """Register one daily due-check per chore, at that chore's own notify_time."""
+    """Register one daily due-check per chore that has reminders enabled, at that
+    chore's own notify_time. Chores with reminders off get no scheduled check and
+    send no push notifications; they still show up in the to-do list and sensors."""
     unsubs: list[Callable[[], None]] = []
     for chore_id, config in entry.options.get(CONF_CHORES, {}).items():
+        if not config.get(CONF_NOTIFY_ENABLED) or not config.get(CONF_NOTIFY_TIME):
+            continue
         hour, minute, second = (
-            int(part) for part in config["notify_time"].split(":")
+            int(part) for part in config[CONF_NOTIFY_TIME].split(":")
         )
 
         async def _tick(now: datetime, chore_id: str = chore_id) -> None:

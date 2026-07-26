@@ -23,7 +23,9 @@ async def setup_entry_with_one_chore(hass):
                     "name": "Dishwasher maintenance",
                     "mode": "cycle_count",
                     "cycle_threshold": 30,
-                    "completion_method": "notification_action",
+                    "nfc_enabled": False,
+                    "notification_enabled": True,
+                    "notify_enabled": True,
                     "notify_time": "08:00:00",
                 }
             }

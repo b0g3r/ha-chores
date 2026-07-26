@@ -24,14 +24,18 @@ async def test_removed_chore_device_is_cleaned_up_on_reload(hass):
         "name": "Dishwasher maintenance",
         "mode": "cycle_count",
         "cycle_threshold": 30,
-        "completion_method": "notification_action",
+        "nfc_enabled": False,
+        "notification_enabled": True,
+        "notify_enabled": True,
         "notify_time": "08:00:00",
     }
     chore_two = {
         "name": "Water plants",
         "mode": "interval_days",
         "interval_days": 7,
-        "completion_method": "notification_action",
+        "nfc_enabled": False,
+        "notification_enabled": True,
+        "notify_enabled": True,
         "notify_time": "08:00:00",
     }
     entry = MockConfigEntry(

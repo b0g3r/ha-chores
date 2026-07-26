@@ -60,8 +60,8 @@ async def test_send_due_notification_targets_only_people_home(hass):
 async def test_send_due_notification_omits_mark_done_action_for_nfc_tag_only_chore(
     hass,
 ):
-    """completion_method="nfc_tag" means the chore is only completable by scanning the
-    tag; the notification must not offer a "Mark done" action button for it."""
+    """notification_enabled=False means the chore is only completable by scanning the
+    NFC tag; the notification must not offer a "Mark done" action button for it."""
     entry = _entry_with_mapping(
         hass,
         chores={
@@ -69,8 +69,10 @@ async def test_send_due_notification_omits_mark_done_action_for_nfc_tag_only_cho
                 "name": "Dishwasher maintenance",
                 "mode": "cycle_count",
                 "cycle_threshold": 30,
-                "completion_method": "nfc_tag",
+                "nfc_enabled": True,
+                "notification_enabled": False,
                 "nfc_tag_entity_id": "tag.dishwasher_maintenance",
+                "notify_enabled": True,
                 "notify_time": "08:00:00",
             }
         },
@@ -97,7 +99,9 @@ async def test_send_due_notification_uses_custom_message_when_set(hass):
                 "name": "Dishwasher maintenance",
                 "mode": "cycle_count",
                 "cycle_threshold": 30,
-                "completion_method": "notification_action",
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": True,
                 "notify_time": "08:00:00",
                 "message": "Run the rinse-aid cycle!",
             }
