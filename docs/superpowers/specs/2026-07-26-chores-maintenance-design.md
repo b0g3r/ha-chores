@@ -35,16 +35,18 @@ This pattern has two structural gaps that motivate this component:
 
 ## 5. Architecture
 
-A custom integration (`custom_components/chores/`, domain `chores`), distributed as a HACS custom repository. One integration, using HA's config-entry **subentries**:
+A custom integration (`custom_components/chores/`, domain `chores`), distributed as a HACS custom repository, with a single config entry:
 
-- **Hub config entry** ("Chores & Maintenance", set up once): holds only the person → notify-target mapping. Nothing else global — no default check time, no default message template.
-- **Chore subentries** (one per chore, added via "+ Add chore" under the hub, entirely through config-flow forms): each becomes its own HA device and owns its own schema (§6).
+- **The config entry** ("Chores & Maintenance", set up once): its config-flow-time data holds only the person → notify-target mapping. Nothing else global — no default check time, no default message template.
+- **Chores** are added, edited, and removed through that entry's **Options Flow** ("+ Add chore" / edit / remove), and stored as a list in the entry's `options`. Each chore gets a generated internal ID and its own schema (§6). Each chore is also registered as its own HA **device**, linked to the hub's device via `via_device`, so it shows up distinctly under Settings → Devices even though there's only one config entry.
+
+This deliberately avoids Home Assistant's newer config-entry-subentries feature — it's a thinner-documented, more recently added API, and an options-flow-managed list plus per-chore devices achieves the identical result (add via UI, no YAML, one device per chore) using a long-established, fully-documented mechanism. Changing the options list triggers an entry reload (a standard `add_update_listener` callback), which rebuilds every chore's entities from the new list.
 
 This gives every chore a device automatically (visible under Settings → Devices), and keeps "add a new chore" a UI action, not a code change.
 
 ## 6. Chore Schema
 
-Each chore subentry stores:
+Each chore (an entry in the config entry's `options["chores"]` list) stores:
 
 | Field | Type | Notes |
 |---|---|---|
@@ -68,8 +70,8 @@ State kept internally per chore (not user-configured): `count` (for cycle mode),
 
 Integration-wide, callable by any automation:
 
-- `chores.log_cycle` (target: a chore subentry) — increments that chore's internal cycle count and immediately runs its due-check. No-op / logs a warning if called on an `interval_days` chore.
-- `chores.mark_complete` (target: a chore subentry) — resets the chore (count → 0, or `last_completed` → now), computes the next due point, clears the due state, and clears any outstanding due-notification (§9).
+- `chores.log_cycle` (target: a chore, by its device) — increments that chore's internal cycle count and immediately runs its due-check. No-op / logs a warning if called on an `interval_days` chore.
+- `chores.mark_complete` (target: a chore, by its device) — resets the chore (count → 0, or `last_completed` → now), computes the next due point, clears the due state, and clears any outstanding due-notification (§9).
 
 Both are the single completion path used internally by §9 below.
 
@@ -78,7 +80,7 @@ Both are the single completion path used internally by §9 below.
 Both completion paths live inside the component — adding a chore never requires hand-writing an automation:
 
 - **NFC:** the component subscribes to HA's `tag_scanned` event bus internally and matches `tag_id` against each chore's configured `nfc_tag_id`, then calls the same internal completion routine as `chores.mark_complete`.
-- **Notification action:** each due-notification's "Mark done" action carries an ID encoding the chore's subentry (e.g. `CHORES_DONE_<subentry_id>`). The component listens for `mobile_app_notification_action` events, resolves the ID back to the chore, and calls the identical completion routine.
+- **Notification action:** each due-notification's "Mark done" action carries an ID encoding the chore (e.g. `CHORES_DONE_<chore_id>`). The component listens for `mobile_app_notification_action` events, resolves the ID back to the chore, and calls the identical completion routine.
 
 Because both funnel through one internal method, there is exactly one place that decides "what happens when a chore is completed."
 
@@ -93,7 +95,7 @@ Both checks share one dedup rule: at most one notification per chore per calenda
 
 Notification recipients: every `person.*` in the hub's mapping whose state is currently `home`, sent to their mapped `notify.*` target (starting simple: everyone home gets notified; a per-chore override is a documented future extension, not built now).
 
-**Notification tagging and clearing.** Every due-notification for a chore is sent with a stable, chore-specific `tag` (e.g. `chores_<subentry_id>`) — the Android/iOS mechanism for replacing an existing notification rather than stacking a new one. When a chore is completed (via NFC, notification action, or the manual button — all three funnel through the same completion routine, §9), that routine sends a `clear_notification` call using the chore's tag to **every** notify target in the hub's mapping, not only the ones currently home. This matters because the person who completes the chore isn't necessarily the only person who received the notification — e.g. one household member scans a tag while another's phone is still showing the sticky reminder; both must clear.
+**Notification tagging and clearing.** Every due-notification for a chore is sent with a stable, chore-specific `tag` (e.g. `chores_<chore_id>`) — the Android/iOS mechanism for replacing an existing notification rather than stacking a new one. When a chore is completed (via NFC, notification action, or the manual button — all three funnel through the same completion routine, §9), that routine sends a `clear_notification` call using the chore's tag to **every** notify target in the hub's mapping, not only the ones currently home. This matters because the person who completes the chore isn't necessarily the only person who received the notification — e.g. one household member scans a tag while another's phone is still showing the sticky reminder; both must clear.
 
 ## 11. Active-Chores List View
 
@@ -105,16 +107,16 @@ The integration exposes a `todo.chores` entity. A chore's corresponding to-do it
 
 If you're migrating from the hand-rolled counter/tag pattern described in §4, the general recipe is:
 
-- Create a chore subentry with `mode: cycle_count`, the appropriate `cycle_threshold`, `completion_method: nfc_tag`, and the existing tag reused as `nfc_tag_id` (no new physical tag needed).
+- Add a chore via the options flow with `mode: cycle_count`, the appropriate `cycle_threshold`, `completion_method: nfc_tag`, and the existing tag reused as `nfc_tag_id` (no new physical tag needed).
 - In whatever automation currently does `counter.increment` + a threshold check + a notify call on cycle completion, replace that block with a single call to `chores.log_cycle` targeting the new chore.
 - Delete the old "tag scanned → reset counter, clear notification" automation — the integration's internal `tag_scanned` listener now owns that tag.
 - Retire the old counter helper once the chore's internal count is confirmed working.
 
-For a chore with no existing cycle-detection at all (a plain interval chore, e.g. a weekly or quarterly task), no migration is needed — just add a chore subentry with `mode: interval_days` and the appropriate `completion_method`.
+For a chore with no existing cycle-detection at all (a plain interval chore, e.g. a weekly or quarterly task), no migration is needed — just add a chore via the options flow with `mode: interval_days` and the appropriate `completion_method`.
 
 ## 13. Distribution & Testing
 
 - Ships as a HACS custom repository: `custom_components/chores/manifest.json`, `config_flow: true`, `iot_class: local_push`.
 - Unit tests around the due-detection state machine (interval math, cycle-threshold crossing, dedup-by-day) are the highest-value tests, independent of a running HA instance.
-- Config-flow tests for hub setup and chore-subentry add/edit.
+- Config-flow and options-flow tests for hub setup and chore add/edit/remove.
 - Manual verification against a live instance for: tag-scan completion, notification-action completion, and the to-do list reflecting due/overdue state correctly.
