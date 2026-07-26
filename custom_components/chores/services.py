@@ -11,6 +11,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, chore_updated_signal
+from .notify import async_clear_due_notification
 from .store import ChoreStore
 
 SERVICE_LOG_CYCLE = "log_cycle"
@@ -35,11 +36,12 @@ async def async_notify_chore_updated(hass: HomeAssistant, chore_id: str) -> None
 
 async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
     """Completion routine shared by the service, NFC, and notification-action paths."""
-    _, store = _get_entry_and_store(hass)
+    entry, store = _get_entry_and_store(hass)
     if chore_id not in store.chores:
         raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
     store.chores[chore_id].mark_complete(date.today())
     await async_notify_chore_updated(hass, chore_id)
+    await async_clear_due_notification(hass, entry, chore_id)
 
 
 async def async_register_services(hass: HomeAssistant) -> None:
