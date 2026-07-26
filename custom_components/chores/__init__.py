@@ -11,7 +11,7 @@ from .listeners import async_register_listeners
 from .services import async_register_services
 from .store import ChoreStore
 
-PLATFORMS: list[str] = ["sensor", "binary_sensor", "button"]
+PLATFORMS: list[str] = ["sensor", "binary_sensor", "button", "todo"]
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
