@@ -78,8 +78,8 @@ def _chore_schema() -> vol.Schema:
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),
-            vol.Optional(CONF_NFC_TAG_ENTITY_ID, default=""): vol.Any(
-                "", selector.EntitySelector(selector.EntitySelectorConfig(domain="tag"))
+            vol.Optional(CONF_NFC_TAG_ENTITY_ID): selector.EntitySelector(
+                selector.EntitySelectorConfig(domain="tag")
             ),
             vol.Required(CONF_NOTIFY_TIME): selector.TimeSelector(),
         }
