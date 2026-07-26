@@ -18,8 +18,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Chores & Maintenance from a config entry."""
     hass.data.setdefault(DOMAIN, {})
 
+    chore_configs = entry.options.get(CONF_CHORES, {})
     store = ChoreStore(hass, entry.entry_id)
-    await store.async_load(entry.options.get(CONF_CHORES, {}))
+    await store.async_load(chore_configs)
     hass.data[DOMAIN][entry.entry_id] = store
 
     await async_register_services(hass)
@@ -30,6 +31,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         identifiers={(DOMAIN, entry.entry_id)},
         name=entry.title,
     )
+    _async_remove_stale_chore_devices(device_registry, entry, chore_configs)
 
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
@@ -55,3 +57,20 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def _async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload the entry when its options change (e.g. a chore was added/removed)."""
     await hass.config_entries.async_reload(entry.entry_id)
+
+
+def _async_remove_stale_chore_devices(
+    device_registry: dr.DeviceRegistry,
+    entry: ConfigEntry,
+    chore_configs: dict,
+) -> None:
+    """Remove devices for chores that no longer exist in this entry's options.
+
+    Without this, deleting a chore via the options flow leaves its device (and
+    the entities registered under it) as permanently `unavailable`.
+    """
+    valid_identifiers = {(DOMAIN, chore_id) for chore_id in chore_configs}
+    valid_identifiers.add((DOMAIN, entry.entry_id))  # the hub device itself
+    for device in dr.async_entries_for_config_entry(device_registry, entry.entry_id):
+        if not device.identifiers & valid_identifiers:
+            device_registry.async_remove_device(device.id)
