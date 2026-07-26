@@ -6,6 +6,7 @@ from datetime import date
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.exceptions import ServiceValidationError
 from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
@@ -35,6 +36,8 @@ async def async_notify_chore_updated(hass: HomeAssistant, chore_id: str) -> None
 async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
     """Completion routine shared by the service, NFC, and notification-action paths."""
     _, store = _get_entry_and_store(hass)
+    if chore_id not in store.chores:
+        raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
     store.chores[chore_id].mark_complete(date.today())
     await async_notify_chore_updated(hass, chore_id)
 
@@ -47,6 +50,8 @@ async def async_register_services(hass: HomeAssistant) -> None:
     async def _handle_log_cycle(call: ServiceCall) -> None:
         chore_id = call.data["chore_id"]
         _, store = _get_entry_and_store(hass)
+        if chore_id not in store.chores:
+            raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
         store.chores[chore_id].log_cycle()
         await async_notify_chore_updated(hass, chore_id)
 

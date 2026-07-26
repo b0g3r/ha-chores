@@ -1,5 +1,6 @@
 """Tests for the chores.log_cycle and chores.mark_complete services."""
 import pytest
+from homeassistant.exceptions import ServiceValidationError
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.chores.const import DOMAIN
@@ -58,3 +59,34 @@ async def test_mark_complete_resets_and_updates_sensor(hass):
 
     assert hass.states.get("sensor.dishwasher_maintenance_status").state == "ok"
     assert hass.states.get("binary_sensor.dishwasher_maintenance_due").state == "off"
+
+
+async def test_button_press_completes_chore_end_to_end(hass):
+    """Task 4's button entity calls chores.mark_complete by string name; verify the
+    literal actually matches services.py's registration, not just that it compiles."""
+    await _setup_entry_with_one_chore(hass)
+    for _ in range(30):
+        await hass.services.async_call(
+            DOMAIN, "log_cycle", {"chore_id": "c1"}, blocking=True
+        )
+    assert hass.states.get("sensor.dishwasher_maintenance_status").state == "due"
+
+    await hass.services.async_call(
+        "button",
+        "press",
+        {"entity_id": "button.dishwasher_maintenance_mark_complete"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    assert hass.states.get("sensor.dishwasher_maintenance_status").state == "ok"
+    assert hass.states.get("binary_sensor.dishwasher_maintenance_due").state == "off"
+
+
+async def test_mark_complete_rejects_unknown_chore_id(hass):
+    await _setup_entry_with_one_chore(hass)
+
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN, "mark_complete", {"chore_id": "does-not-exist"}, blocking=True
+        )
