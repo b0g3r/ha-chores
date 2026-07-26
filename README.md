@@ -15,7 +15,7 @@ See `docs/superpowers/specs/2026-07-26-chores-maintenance-design.md` for the ful
 
 ## Installation
 
-Add this repository as a custom repository in [HACS](https://hacs.xyz/), category "Integration", then install "Chores & Maintenance" and restart Home Assistant.
+In [HACS](https://hacs.xyz/), add `https://github.com/b0g3r/ha-chores` as a custom repository (category "Integration"), then install "Chores & Maintenance" and restart Home Assistant.
 
 ## Configuration
 
