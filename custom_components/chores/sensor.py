@@ -1,14 +1,13 @@
 """Sensor platform: per-chore status."""
 from __future__ import annotations
 
-from datetime import date
-
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, chore_updated_signal
 from .store import ChoreStore
@@ -52,7 +51,7 @@ class ChoreStatusSensor(SensorEntity):
     @property
     def native_value(self) -> str:
         chore = self._store.chores[self._chore_id]
-        return "due" if chore.is_due(date.today()) else "ok"
+        return "due" if chore.is_due(dt_util.now().date()) else "ok"
 
     @property
     def extra_state_attributes(self) -> dict:
@@ -61,6 +60,7 @@ class ChoreStatusSensor(SensorEntity):
             chore.last_completed.isoformat() if chore.last_completed else None
         )
         return {
+            "chore_id": self._chore_id,
             "last_completed": last_completed,
             "count": chore.count,
             "cycle_threshold": chore.cycle_threshold,
