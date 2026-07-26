@@ -2,6 +2,8 @@
 
 A Home Assistant custom integration for recurring household chores and maintenance tasks — the kind with a cadence (every N days, or every N uses of something) and a completion action (scan an NFC tag, or tap a notification button).
 
+> **Status:** early scaffold — not functional yet. The features below describe the planned design (see the linked spec).
+
 ## Features
 
 - Add a chore through the UI — no YAML, no helper entities to create by hand.
@@ -19,7 +21,7 @@ In [HACS](https://hacs.xyz/), add `https://github.com/b0g3r/ha-chores` as a cust
 
 ## Configuration
 
-Settings → Devices & Services → Add Integration → "Chores & Maintenance" sets up the hub. Add individual chores from the hub's device page.
+Settings → Devices & Services → Add Integration → "Chores & Maintenance" sets up the hub. Add individual chores via the hub's **Configure** button (Settings → Devices & Services → Chores & Maintenance → Configure).
 
 ## License
 
