@@ -6,6 +6,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers import device_registry as dr
 
 from .const import CONF_CHORES, DOMAIN
+from .due_check import async_schedule_daily_checks
 from .services import async_register_services
 from .store import ChoreStore
 
@@ -32,6 +33,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_reload_entry))
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
+    for unsub in async_schedule_daily_checks(hass, entry):
+        entry.async_on_unload(unsub)
+
     return True
 
 

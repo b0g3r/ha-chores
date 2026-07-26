@@ -1,0 +1,50 @@
+"""The shared due-check routine and its daily per-chore scheduling (spec §10)."""
+from __future__ import annotations
+
+from collections.abc import Callable
+from datetime import date, datetime
+
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.dispatcher import async_dispatcher_send
+from homeassistant.helpers.event import async_track_time_change
+
+from .const import CONF_CHORES, DOMAIN, chore_updated_signal
+from .notify import async_send_due_notification
+from .store import ChoreStore
+
+
+async def async_run_due_check(
+    hass: HomeAssistant, entry: ConfigEntry, chore_id: str
+) -> None:
+    """Send this chore's due-notification if it's due and not already sent today."""
+    store: ChoreStore = hass.data[DOMAIN][entry.entry_id]
+    chore = store.chores[chore_id]
+    today = date.today()
+    if not chore.should_notify_today(today):
+        return
+    await async_send_due_notification(hass, entry, chore)
+    chore.record_notified(today)
+    await store.async_save()
+    async_dispatcher_send(hass, chore_updated_signal(chore_id))
+
+
+def async_schedule_daily_checks(
+    hass: HomeAssistant, entry: ConfigEntry
+) -> list[Callable[[], None]]:
+    """Register one daily due-check per chore, at that chore's own notify_time."""
+    unsubs: list[Callable[[], None]] = []
+    for chore_id, config in entry.options.get(CONF_CHORES, {}).items():
+        hour, minute, second = (
+            int(part) for part in config["notify_time"].split(":")
+        )
+
+        async def _tick(now: datetime, chore_id: str = chore_id) -> None:
+            await async_run_due_check(hass, entry, chore_id)
+
+        unsubs.append(
+            async_track_time_change(
+                hass, _tick, hour=hour, minute=minute, second=second
+            )
+        )
+    return unsubs

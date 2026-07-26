@@ -11,6 +11,7 @@ from homeassistant.helpers import config_validation as cv
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 
 from .const import DOMAIN, chore_updated_signal
+from .due_check import async_run_due_check
 from .notify import async_clear_due_notification
 from .store import ChoreStore
 
@@ -51,11 +52,12 @@ async def async_register_services(hass: HomeAssistant) -> None:
 
     async def _handle_log_cycle(call: ServiceCall) -> None:
         chore_id = call.data["chore_id"]
-        _, store = _get_entry_and_store(hass)
+        entry, store = _get_entry_and_store(hass)
         if chore_id not in store.chores:
             raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
         store.chores[chore_id].log_cycle()
         await async_notify_chore_updated(hass, chore_id)
+        await async_run_due_check(hass, entry, chore_id)
 
     async def _handle_mark_complete(call: ServiceCall) -> None:
         await async_complete_chore(hass, call.data["chore_id"])
