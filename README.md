@@ -16,6 +16,10 @@ A Home Assistant custom integration for recurring household chores and maintenan
 
 See `docs/superpowers/specs/2026-07-26-chores-maintenance-design.md` for the full design.
 
+## Why this exists
+
+Recurring maintenance (filters, descaling, that sort of thing) kept quietly slipping through the cracks — easy to forget when nothing nags you about it. I wanted a fix that didn't involve opening an app: tap an NFC tag on your way past and the chore's done. Everything else — the due-tracking, the presence-gated reminders, the to-do list — grew out of making that one interaction actually reliable.
+
 ## Installation
 
 Click the HACS badge above (requires [My Home Assistant](https://www.home-assistant.io/integrations/my/) linked to your instance), or manually: in [HACS](https://hacs.xyz/), add `https://github.com/b0g3r/ha-chores` as a custom repository (category "Integration"), then install "Chores & Maintenance" and restart Home Assistant.
