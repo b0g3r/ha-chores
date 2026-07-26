@@ -3,10 +3,10 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import date, timedelta
-from enum import Enum
+from enum import StrEnum
 
 
-class ChoreMode(str, Enum):
+class ChoreMode(StrEnum):
     INTERVAL_DAYS = "interval_days"
     CYCLE_COUNT = "cycle_count"
 

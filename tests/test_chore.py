@@ -7,22 +7,34 @@ from custom_components.chores.chore import Chore, ChoreMode
 
 
 def test_cycle_chore_not_due_below_threshold():
-    chore = Chore("c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30, count=29)
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT,
+        cycle_threshold=30, count=29,
+    )
     assert chore.is_due(date(2026, 1, 1)) is False
 
 
 def test_cycle_chore_due_at_threshold():
-    chore = Chore("c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30, count=30)
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT,
+        cycle_threshold=30, count=30,
+    )
     assert chore.is_due(date(2026, 1, 1)) is True
 
 
 def test_cycle_chore_stays_due_above_threshold():
-    chore = Chore("c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30, count=45)
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT,
+        cycle_threshold=30, count=45,
+    )
     assert chore.is_due(date(2026, 1, 1)) is True
 
 
 def test_log_cycle_increments_count():
-    chore = Chore("c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30, count=29)
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT,
+        cycle_threshold=30, count=29,
+    )
     chore.log_cycle()
     assert chore.count == 30
     assert chore.is_due(date(2026, 1, 1)) is True
@@ -56,7 +68,10 @@ def test_interval_chore_due_exactly_on_interval_boundary():
 
 
 def test_should_notify_today_dedup():
-    chore = Chore("c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30, count=30)
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT,
+        cycle_threshold=30, count=30,
+    )
     today = date(2026, 1, 1)
     assert chore.should_notify_today(today) is True
     chore.record_notified(today)

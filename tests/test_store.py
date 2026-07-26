@@ -2,7 +2,11 @@
 from custom_components.chores.store import ChoreStore
 
 CHORE_CONFIGS = {
-    "c1": {"name": "Dishwasher maintenance", "mode": "cycle_count", "cycle_threshold": 30},
+    "c1": {
+        "name": "Dishwasher maintenance",
+        "mode": "cycle_count",
+        "cycle_threshold": 30,
+    },
 }
 
 
