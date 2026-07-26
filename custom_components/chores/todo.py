@@ -1,13 +1,12 @@
 """A single to-do list entity showing every currently-due chore (spec §11)."""
 from __future__ import annotations
 
-from datetime import date
-
 from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, chore_updated_signal
 from .store import ChoreStore
@@ -44,7 +43,7 @@ class ActiveChoresTodoList(TodoListEntity):
 
     @property
     def todo_items(self) -> list[TodoItem]:
-        today = date.today()
+        today = dt_util.now().date()
         return [
             TodoItem(
                 uid=chore_id, summary=chore.name, status=TodoItemStatus.NEEDS_ACTION

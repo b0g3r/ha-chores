@@ -1,14 +1,13 @@
 """Binary sensor platform: per-chore due flag."""
 from __future__ import annotations
 
-from datetime import date
-
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN, chore_updated_signal
 from .store import ChoreStore
@@ -51,4 +50,4 @@ class ChoreDueBinarySensor(BinarySensorEntity):
 
     @property
     def is_on(self) -> bool:
-        return self._store.chores[self._chore_id].is_due(date.today())
+        return self._store.chores[self._chore_id].is_due(dt_util.now().date())

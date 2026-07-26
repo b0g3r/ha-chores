@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import date, datetime
+from datetime import datetime
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.util import dt as dt_util
 
 from .const import CONF_CHORES, DOMAIN, chore_updated_signal
 from .notify import async_send_due_notification
@@ -20,7 +21,7 @@ async def async_run_due_check(
     """Send this chore's due-notification if it's due and not already sent today."""
     store: ChoreStore = hass.data[DOMAIN][entry.entry_id]
     chore = store.chores[chore_id]
-    today = date.today()
+    today = dt_util.now().date()
     if not chore.should_notify_today(today):
         return
     await async_send_due_notification(hass, entry, chore)
