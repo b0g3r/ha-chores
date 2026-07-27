@@ -17,4 +17,4 @@ mark_complete:
       required: false
       example: "2026-07-20"
       selector:
-        date:
+        text:
