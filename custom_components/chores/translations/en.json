@@ -33,6 +33,7 @@
           "notification_enabled": "Mark done from a button in the reminder notification",
           "notify_enabled": "Send reminder notifications",
           "notify_time": "What time to send the reminder (only used if the option above is on)",
+          "weekends_only": "Only send reminders on weekends (only used if reminders are enabled above)",
           "message": "What the reminder should say — leave blank to just say the chore's name is due"
         }
       },

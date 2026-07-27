@@ -23,6 +23,7 @@ from .const import (
     CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_TIME,
     CONF_PERSON_NOTIFY_MAP,
+    CONF_WEEKENDS_ONLY,
     DOMAIN,
     MODE_CYCLE_COUNT,
     MODE_INTERVAL_DAYS,
@@ -91,6 +92,9 @@ def _chore_schema() -> vol.Schema:
                 CONF_NOTIFY_ENABLED, default=False
             ): selector.BooleanSelector(),
             vol.Optional(CONF_NOTIFY_TIME): selector.TimeSelector(),
+            vol.Required(
+                CONF_WEEKENDS_ONLY, default=False
+            ): selector.BooleanSelector(),
             vol.Optional(CONF_MESSAGE): str,
         }
     )

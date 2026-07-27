@@ -14,6 +14,7 @@ from .const import (
     CONF_CHORES,
     CONF_NOTIFY_ENABLED,
     CONF_NOTIFY_TIME,
+    CONF_WEEKENDS_ONLY,
     DOMAIN,
     chore_updated_signal,
 )
@@ -29,6 +30,9 @@ async def async_run_due_check(
     chore = store.chores[chore_id]
     today = dt_util.now().date()
     if not chore.should_notify_today(today):
+        return
+    config = entry.options.get(CONF_CHORES, {}).get(chore_id, {})
+    if config.get(CONF_WEEKENDS_ONLY) and today.weekday() < 5:
         return
     await async_send_due_notification(hass, entry, chore)
     chore.record_notified(today)

@@ -1,5 +1,5 @@
 """Tests for the shared due-check routine and its dedup behavior."""
-from datetime import date
+from datetime import date, datetime
 from unittest.mock import AsyncMock, patch
 
 from pytest_homeassistant_custom_component.common import MockConfigEntry
@@ -58,6 +58,48 @@ async def test_due_check_sends_once_and_records_notified_date(hass):
 
         await async_run_due_check(hass, entry, "c1")
         assert send_mock.await_count == 1  # dedup: not sent again the same day
+
+
+async def test_due_check_skips_weekday_when_weekends_only_is_set(hass):
+    """weekends_only must suppress the notification (and not mark it as sent) on a
+    weekday, so it's still due and unnotified once the weekend actually arrives."""
+    entry = await _setup_entry_with_one_chore(
+        hass,
+        {
+            "c1": {
+                "name": "Dishwasher maintenance",
+                "mode": "cycle_count",
+                "cycle_threshold": 30,
+                "nfc_enabled": False,
+                "notification_enabled": True,
+                "notify_enabled": True,
+                "notify_time": "08:00:00",
+                "weekends_only": True,
+            }
+        },
+    )
+    hass.data[DOMAIN][entry.entry_id].chores["c1"].count = 30
+    store: ChoreStore = hass.data[DOMAIN][entry.entry_id]
+
+    with patch(
+        "custom_components.chores.due_check.async_send_due_notification",
+        new=AsyncMock(),
+    ) as send_mock:
+        with patch(
+            "custom_components.chores.due_check.dt_util.now",
+            return_value=datetime(2026, 7, 28),  # a Tuesday
+        ):
+            await async_run_due_check(hass, entry, "c1")
+        assert send_mock.await_count == 0
+        assert store.chores["c1"].last_notified_date is None
+
+        with patch(
+            "custom_components.chores.due_check.dt_util.now",
+            return_value=datetime(2026, 8, 1),  # a Saturday
+        ):
+            await async_run_due_check(hass, entry, "c1")
+        assert send_mock.await_count == 1
+        assert store.chores["c1"].last_notified_date == date(2026, 8, 1)
 
 
 async def test_log_cycle_service_triggers_immediate_due_check(hass):
