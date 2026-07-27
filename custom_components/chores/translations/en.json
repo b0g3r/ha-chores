@@ -23,15 +23,15 @@
         "title": "Add a chore",
         "data": {
           "name": "Name",
-          "mode": "Due-trigger type",
-          "interval_days": "Interval (days) — only used if type is Interval",
-          "cycle_threshold": "Cycle threshold — only used if type is Cycle count",
-          "nfc_enabled": "Complete by scanning an NFC tag",
-          "nfc_tag_entity_id": "NFC tag — required if NFC tag scanning is enabled",
-          "notification_enabled": "Complete via a notification action button",
-          "notify_enabled": "Send a repeating reminder notification",
-          "notify_time": "Reminder notification time — required if reminders are enabled",
-          "message": "Notification message — leave blank for the default: the chore's name plus \"is due.\""
+          "mode": "Repeats by",
+          "interval_days": "Repeat every this many days (only used when repeating by days)",
+          "cycle_threshold": "Repeat every this many uses (only used when repeating by uses)",
+          "nfc_enabled": "Mark done by scanning an NFC tag",
+          "nfc_tag_entity_id": "Which NFC tag (only used if the option above is on)",
+          "notification_enabled": "Mark done from a button in the reminder notification",
+          "notify_enabled": "Send reminder notifications",
+          "notify_time": "What time to send the reminder (only used if the option above is on)",
+          "message": "What the reminder should say — leave blank to just say the chore's name is due"
         }
       },
       "remove_chore": {
@@ -48,11 +48,11 @@
       "no_chores": "There are no chores to remove yet."
     },
     "error": {
-      "interval_days_required": "Enter an interval (in days) for this chore.",
-      "cycle_threshold_required": "Enter a cycle threshold for this chore.",
-      "completion_method_required": "Enable at least one completion method: NFC tag or notification action.",
-      "nfc_tag_required": "Select an NFC tag, since NFC tag scanning is enabled.",
-      "notify_time_required": "Set a reminder notification time, since reminders are enabled."
+      "interval_days_required": "Enter how many days between repeats.",
+      "cycle_threshold_required": "Enter how many uses before it's due.",
+      "completion_method_required": "Turn on at least one way to mark this done: NFC tag or notification button.",
+      "nfc_tag_required": "Choose which NFC tag to use.",
+      "notify_time_required": "Set a time for the reminder."
     }
   }
 }

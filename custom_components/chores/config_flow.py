@@ -59,7 +59,14 @@ def _chore_schema() -> vol.Schema:
                 CONF_MODE, default=MODE_INTERVAL_DAYS
             ): selector.SelectSelector(
                 selector.SelectSelectorConfig(
-                    options=[MODE_INTERVAL_DAYS, MODE_CYCLE_COUNT],
+                    options=[
+                        selector.SelectOptionDict(
+                            value=MODE_INTERVAL_DAYS, label="Repeat every N days"
+                        ),
+                        selector.SelectOptionDict(
+                            value=MODE_CYCLE_COUNT, label="Repeat every N uses"
+                        ),
+                    ],
                     mode=selector.SelectSelectorMode.DROPDOWN,
                 )
             ),

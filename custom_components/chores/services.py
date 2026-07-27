@@ -1,6 +1,8 @@
 """Services for the Chores & Maintenance integration."""
 from __future__ import annotations
 
+from datetime import date
+
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, ServiceCall
@@ -20,6 +22,9 @@ from .notify import async_clear_due_notification
 from .store import ChoreStore
 
 _CHORE_ID_SCHEMA = vol.Schema({vol.Required("chore_id"): cv.string})
+_MARK_COMPLETE_SCHEMA = vol.Schema(
+    {vol.Required("chore_id"): cv.string, vol.Optional("completed_on"): cv.date}
+)
 
 
 def _get_entry_and_store(hass: HomeAssistant) -> tuple[ConfigEntry, ChoreStore]:
@@ -36,12 +41,14 @@ async def async_notify_chore_updated(hass: HomeAssistant, chore_id: str) -> None
     async_dispatcher_send(hass, chore_updated_signal(chore_id))
 
 
-async def async_complete_chore(hass: HomeAssistant, chore_id: str) -> None:
+async def async_complete_chore(
+    hass: HomeAssistant, chore_id: str, completed_on: date | None = None
+) -> None:
     """Completion routine shared by the service, NFC, and notification-action paths."""
     entry, store = _get_entry_and_store(hass)
     if chore_id not in store.chores:
         raise ServiceValidationError(f"Unknown chore_id: {chore_id}")
-    store.chores[chore_id].mark_complete(dt_util.now().date())
+    store.chores[chore_id].mark_complete(completed_on or dt_util.now().date())
     await async_notify_chore_updated(hass, chore_id)
     await async_clear_due_notification(hass, entry, chore_id)
 
@@ -66,11 +73,16 @@ async def async_register_services(hass: HomeAssistant) -> None:
         await async_run_due_check(hass, entry, chore_id)
 
     async def _handle_mark_complete(call: ServiceCall) -> None:
-        await async_complete_chore(hass, call.data["chore_id"])
+        await async_complete_chore(
+            hass, call.data["chore_id"], call.data.get("completed_on")
+        )
 
     hass.services.async_register(
         DOMAIN, SERVICE_LOG_CYCLE, _handle_log_cycle, schema=_CHORE_ID_SCHEMA
     )
     hass.services.async_register(
-        DOMAIN, SERVICE_MARK_COMPLETE, _handle_mark_complete, schema=_CHORE_ID_SCHEMA
+        DOMAIN,
+        SERVICE_MARK_COMPLETE,
+        _handle_mark_complete,
+        schema=_MARK_COMPLETE_SCHEMA,
     )
