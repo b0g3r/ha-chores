@@ -99,14 +99,21 @@ def _chore_schema() -> vol.Schema:
 class ChoresOptionsFlow(config_entries.OptionsFlow):
     """Manage chores and the person-to-notify-target mapping."""
 
+    _edit_chore_id: str | None = None
+
     async def async_step_init(self, user_input: dict[str, Any] | None = None):
         return self.async_show_menu(
             step_id="init",
-            menu_options=["add_chore", "remove_chore", "notify_mapping"],
+            menu_options=["add_chore", "edit_chore", "remove_chore", "notify_mapping"],
         )
 
     async def async_step_add_chore(self, user_input: dict[str, Any] | None = None):
+        """Add a new chore, or -- when async_step_edit_chore set _edit_chore_id --
+        update that existing chore in place instead, keeping its chore_id (and thus
+        its stored progress) rather than replacing it with a fresh one."""
         errors: dict[str, str] = {}
+        chores = dict(self.config_entry.options.get(CONF_CHORES, {}))
+        current = chores.get(self._edit_chore_id, {}) if self._edit_chore_id else {}
         if user_input is not None:
             if user_input[CONF_MODE] == MODE_INTERVAL_DAYS and not user_input.get(
                 CONF_INTERVAL_DAYS
@@ -129,14 +136,42 @@ class ChoresOptionsFlow(config_entries.OptionsFlow):
             ):
                 errors["base"] = "notify_time_required"
             else:
-                chores = dict(self.config_entry.options.get(CONF_CHORES, {}))
-                chores[uuid.uuid4().hex] = user_input
+                chores[self._edit_chore_id or uuid.uuid4().hex] = user_input
                 return self.async_create_entry(
                     title="", data={**self.config_entry.options, CONF_CHORES: chores}
                 )
+        schema = _chore_schema()
+        if current:
+            schema = self.add_suggested_values_to_schema(schema, current)
         return self.async_show_form(
-            step_id="add_chore", data_schema=_chore_schema(), errors=errors
+            step_id="add_chore",
+            data_schema=schema,
+            errors=errors,
+            description_placeholders={
+                "editing_note": f'Editing "{current[CONF_NAME]}".' if current else ""
+            },
         )
+
+    async def async_step_edit_chore(self, user_input: dict[str, Any] | None = None):
+        chores = self.config_entry.options.get(CONF_CHORES, {})
+        if not chores:
+            return self.async_abort(reason="no_chores")
+        if user_input is not None:
+            self._edit_chore_id = user_input["chore_id"]
+            return await self.async_step_add_chore()
+        schema = vol.Schema(
+            {
+                vol.Required("chore_id"): selector.SelectSelector(
+                    selector.SelectSelectorConfig(
+                        options=[
+                            selector.SelectOptionDict(value=cid, label=cfg[CONF_NAME])
+                            for cid, cfg in chores.items()
+                        ]
+                    )
+                )
+            }
+        )
+        return self.async_show_form(step_id="edit_chore", data_schema=schema)
 
     async def async_step_remove_chore(self, user_input: dict[str, Any] | None = None):
         chores = self.config_entry.options.get(CONF_CHORES, {})

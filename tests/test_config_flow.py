@@ -105,6 +105,82 @@ async def test_remove_chore_aborts_when_no_chores(hass):
     assert result["reason"] == "no_chores"
 
 
+async def test_edit_chore_prefills_form_and_updates_in_place(hass):
+    """Editing must update the existing chore_id's config rather than allocate a new
+    uuid -- a fresh id would orphan the chore's stored progress (count/last_completed)
+    in ChoreStore, which is keyed by chore_id."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Chores & Maintenance",
+        data={},
+        options={
+            CONF_CHORES: {
+                "id1": {
+                    "name": "Water plants",
+                    "mode": "interval_days",
+                    "interval_days": 7,
+                    "nfc_enabled": False,
+                    "notification_enabled": True,
+                    "notify_enabled": True,
+                    "notify_time": "08:00:00",
+                    "message": "old message",
+                }
+            }
+        },
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "edit_chore"}
+    )
+    assert result["type"] == "form"
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"chore_id": "id1"}
+    )
+
+    assert result["type"] == "form"
+    message_key = next(k for k in result["data_schema"].schema if k == "message")
+    assert message_key.description["suggested_value"] == "old message"
+
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        {
+            "name": "Water plants",
+            "mode": "interval_days",
+            "interval_days": 7,
+            "cycle_threshold": 30,
+            "nfc_enabled": False,
+            "notification_enabled": True,
+            "notify_enabled": True,
+            "notify_time": "08:00:00",
+            "message": "new message",
+        },
+    )
+
+    assert result["type"] == "create_entry"
+    chores = entry.options[CONF_CHORES]
+    assert list(chores) == ["id1"]
+    assert chores["id1"]["message"] == "new message"
+
+
+async def test_edit_chore_aborts_when_no_chores(hass):
+    entry = MockConfigEntry(
+        domain=DOMAIN, title="Chores & Maintenance", data={}, options={}
+    )
+    entry.add_to_hass(hass)
+    await hass.config_entries.async_setup(entry.entry_id)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], {"next_step_id": "edit_chore"}
+    )
+
+    assert result["type"] == "abort"
+    assert result["reason"] == "no_chores"
+
+
 async def test_notify_mapping_sets_mapping_and_reads_person_entities(hass):
     entry = MockConfigEntry(
         domain=DOMAIN, title="Chores & Maintenance", data={}, options={}
