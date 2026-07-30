@@ -1,6 +1,8 @@
 """Sending and clearing due-notifications (spec §10)."""
 from __future__ import annotations
 
+import logging
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
@@ -13,15 +15,31 @@ from .const import (
     NOTIFICATION_ACTION_PREFIX,
 )
 
+_LOGGER = logging.getLogger(__name__)
+
 
 def notification_tag(chore_id: str) -> str:
     """Stable per-chore notification tag, used both to send and to clear (spec §10)."""
     return f"chores_{chore_id}"
 
 
-def _notify_service_name(notify_entity_id: str) -> str:
-    """'notify.alex_phone' -> 'alex_phone', the service name under the notify domain."""
-    return notify_entity_id.split(".", 1)[1]
+def _resolve_notify_service(hass: HomeAssistant, notify_entity_id: str) -> str | None:
+    """Find the callable notify service backing a notify entity picked in options.
+
+    The person->notify mapping is filled via an EntitySelector(domain="notify"),
+    which lists notify *entities* -- but rich data (tag/sticky/actions, needed for
+    the "Mark done" action and for clearing) only works through the legacy
+    per-target *service*. For mobile_app, that service is the entity's object_id
+    prefixed with "mobile_app_" (e.g. entity notify.s25 -> service
+    notify.mobile_app_s25); they're registered from the same device name but
+    aren't the same string, so calling the object_id directly 404s. Fall back to
+    the object_id itself for non-mobile_app targets, where it typically matches."""
+    object_id = notify_entity_id.split(".", 1)[1]
+    for candidate in (object_id, f"mobile_app_{object_id}"):
+        if hass.services.has_service("notify", candidate):
+            return candidate
+    _LOGGER.warning("No notify service found for %s; skipping", notify_entity_id)
+    return None
 
 
 async def async_send_due_notification(
@@ -46,9 +64,12 @@ async def async_send_due_notification(
         state = hass.states.get(person_entity_id)
         if state is None or state.state != "home":
             continue
+        service = _resolve_notify_service(hass, notify_entity_id)
+        if service is None:
+            continue
         await hass.services.async_call(
             "notify",
-            _notify_service_name(notify_entity_id),
+            service,
             {
                 "title": chore.name,
                 "message": message,
@@ -66,8 +87,11 @@ async def async_clear_due_notification(
     for notify_entity_id in person_notify_map.values():
         if "." not in notify_entity_id:
             continue  # malformed mapping entry; don't let it abort the others
+        service = _resolve_notify_service(hass, notify_entity_id)
+        if service is None:
+            continue
         await hass.services.async_call(
             "notify",
-            _notify_service_name(notify_entity_id),
+            service,
             {"message": "clear_notification", "data": {"tag": tag}},
         )

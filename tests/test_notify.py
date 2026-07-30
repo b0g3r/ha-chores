@@ -135,6 +135,57 @@ async def test_send_due_notification_skips_people_not_home(hass):
     assert calls == []
 
 
+async def test_send_due_notification_falls_back_to_mobile_app_prefixed_service(hass):
+    """The person->notify mapping stores a notify *entity* id (e.g. notify.s25) chosen
+    via an EntitySelector, but mobile_app's rich-data-capable legacy service for that
+    same device is registered as notify.mobile_app_s25 -- a different string. Calling
+    the entity's own object_id as the service must fall back to the prefixed one
+    instead of silently dropping the notification (this was the actual missed
+    9:00 reminder: notify.s25 was mapped, but only notify.mobile_app_s25 existed)."""
+    entry = MockConfigEntry(
+        domain=DOMAIN,
+        title="Chores & Maintenance",
+        data={},
+        options={CONF_PERSON_NOTIFY_MAP: {"person.alex": "notify.s25"}},
+    )
+    entry.add_to_hass(hass)
+    hass.states.async_set("person.alex", "home")
+    calls = []
+
+    async def _handler(call):
+        calls.append(call.data)
+
+    hass.services.async_register("notify", "mobile_app_s25", _handler)
+
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30,
+        count=30,
+    )
+    await async_send_due_notification(hass, entry, chore)
+
+    assert len(calls) == 1
+    assert calls[0]["data"]["tag"] == notification_tag("c1")
+
+
+async def test_send_due_notification_skips_target_with_no_matching_service(
+    hass, caplog
+):
+    """Neither the object_id nor the mobile_app-prefixed candidate resolves to a
+    registered service: must log and skip rather than raising, so a single stale
+    mapping entry can't take down delivery to the rest of person_notify_map."""
+    entry = _entry_with_mapping(hass)  # maps person.alex -> notify.alex_phone
+    hass.states.async_set("person.alex", "home")
+    # No service registered under "notify" at all -- both candidates miss.
+
+    chore = Chore(
+        "c1", "Dishwasher maintenance", ChoreMode.CYCLE_COUNT, cycle_threshold=30,
+        count=30,
+    )
+    await async_send_due_notification(hass, entry, chore)  # must not raise
+
+    assert "No notify service found" in caplog.text
+
+
 async def test_clear_due_notification_targets_everyone_mapped_regardless_of_presence(
     hass,
 ):
@@ -149,6 +200,19 @@ async def test_clear_due_notification_targets_everyone_mapped_regardless_of_pres
     data = calls[0]
     assert data["message"] == "clear_notification"
     assert data["data"]["tag"] == notification_tag("c1")
+
+
+async def test_clear_due_notification_skips_target_with_no_matching_service(
+    hass, caplog
+):
+    """Same no-match case as the send-path test, for the clear path: must log and
+    skip rather than raising."""
+    entry = _entry_with_mapping(hass)  # maps person.alex -> notify.alex_phone
+    # No service registered under "notify" at all -- both candidates miss.
+
+    await async_clear_due_notification(hass, entry, "c1")  # must not raise
+
+    assert "No notify service found" in caplog.text
 
 
 def _entry_with_one_malformed_mapping(hass):
