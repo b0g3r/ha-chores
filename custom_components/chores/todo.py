@@ -1,14 +1,19 @@
 """A single to-do list entity showing every currently-due chore (spec §11)."""
 from __future__ import annotations
 
-from homeassistant.components.todo import TodoItem, TodoItemStatus, TodoListEntity
+from homeassistant.components.todo import (
+    TodoItem,
+    TodoItemStatus,
+    TodoListEntity,
+    TodoListEntityFeature,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.util import dt as dt_util
 
-from .const import DOMAIN, chore_updated_signal
+from .const import DOMAIN, SERVICE_MARK_COMPLETE, chore_updated_signal
 from .store import ChoreStore
 
 
@@ -22,11 +27,14 @@ async def async_setup_entry(
 class ActiveChoresTodoList(TodoListEntity):
     """Lists every chore that is currently due/overdue.
 
-    Read-only: items are driven by chore due-state (Task 1-7), not by user
-    checkboxes, so no UPDATE_TODO_ITEM feature.
+    The list itself is a computed view of chore due-state (Task 1-7), but
+    checking an item off routes through the same mark_complete service the
+    per-chore button uses, so it completes with today's date -- no
+    backdating from the checkbox, matching the button's constraint.
     """
 
     _attr_should_poll = False
+    _attr_supported_features = TodoListEntityFeature.UPDATE_TODO_ITEM
 
     def __init__(self, entry: ConfigEntry, store: ChoreStore) -> None:
         self._store = store
@@ -51,3 +59,10 @@ class ActiveChoresTodoList(TodoListEntity):
             for chore_id, chore in self._store.chores.items()
             if chore.is_due(today)
         ]
+
+    async def async_update_todo_item(self, item: TodoItem) -> None:
+        if item.status != TodoItemStatus.COMPLETED:
+            return
+        await self.hass.services.async_call(
+            DOMAIN, SERVICE_MARK_COMPLETE, {"chore_id": item.uid}, blocking=True
+        )

@@ -91,3 +91,27 @@ async def test_completing_a_chore_removes_it_from_the_list(hass):
     state = hass.states.get("todo.chores")
     assert state is not None
     assert state.state == "1"
+
+
+async def test_checking_off_an_item_marks_the_chore_complete(hass):
+    entry = await _setup_entry_with_two_chores(hass)
+    hass.data[DOMAIN][entry.entry_id].chores["c1"].count = 30
+
+    await hass.services.async_call(
+        "todo",
+        "update_item",
+        {"entity_id": "todo.chores", "item": "c1", "status": "completed"},
+        blocking=True,
+    )
+    await hass.async_block_till_done()
+
+    result = await hass.services.async_call(
+        "todo",
+        "get_items",
+        {"entity_id": "todo.chores"},
+        blocking=True,
+        return_response=True,
+    )
+    uids = {item["uid"] for item in result["todo.chores"]["items"]}
+    assert "c1" not in uids  # checking it off routed through mark_complete
+    assert uids == {"c2"}
